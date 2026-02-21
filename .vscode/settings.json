@@ -1,0 +1,15 @@
+{
+  "files.exclude": {
+    ".vscode": true,
+    ".pnpm-store": true,
+    "node_modules": true,
+    "packages": true,
+    ".gitignore": true,
+    "package.json": true,
+    "pnpm-lock.yaml": true,
+    "pnpm-workspace.yaml": true,
+    "README.md": true,
+    "tsconfig.base.json": true,
+    "turbo.json": true
+  }
+}

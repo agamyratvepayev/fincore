@@ -1,0 +1,61 @@
+[
+  {
+    "username": "admin",
+    "password": "admin123",
+    "role": "admin",
+    "tenantIds": [
+      "gurlusyk",
+      "mebel-seh",
+      "demir-seh",
+      "tehnika",
+      "algy-bergi",
+      "atlas",
+      "agro",
+      "sera",
+      "okuw-merkez",
+      "logistika",
+      "maksat-deri",
+      "mary-deri",
+      "rowsen-ayakgap",
+      "banyo-kafe",
+      "ekerancylyk",
+      "maldarcylyk",
+      "yupluk"
+    ],
+    "note": "Default admin"
+  },
+  {
+    "username": "Mekan Rejepow",
+    "password": "12345678",
+    "role": "viewer",
+    "tenantIds": [
+      "agro"
+    ],
+    "note": "Agro muir"
+  },
+  {
+    "username": "Akm",
+    "password": "12345678",
+    "role": "manager",
+    "tenantIds": [
+      "gurlusyk",
+      "mebel-seh",
+      "demir-seh",
+      "tehnika",
+      "algy-bergi",
+      "atlas",
+      "agro",
+      "sera",
+      "okuw-merkez",
+      "logistika",
+      "maksat-deri",
+      "mary-deri",
+      "rowsen-ayakgap",
+      "banyo-kafe",
+      "ekerancylyk",
+      "maldarcylyk",
+      "yupluk"
+    ],
+    "note": "Baslyk"
+  }
+]

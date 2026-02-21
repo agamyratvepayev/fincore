@@ -1,0 +1,75 @@
+import type { FastifyInstance } from "fastify";
+import type { ReportQuery } from "../../../../shared/reporting/reporting.types.js";
+import { tenantMiddleware } from "../reporting.middleware.js";
+import { BalanceSheetService } from "./balance-sheet.service.js";
+
+export async function balanceSheetController(
+  server: FastifyInstance,
+  service = new BalanceSheetService()
+) {
+  const parseOptionalNumber = (value: unknown) => {
+    if (value == null) return undefined;
+    const text = String(value).trim();
+    if (!text) return undefined;
+    const num = Number(text);
+    return Number.isFinite(num) ? num : undefined;
+  };
+  const parseOptionalText = (value: unknown) => {
+    if (value == null) return undefined;
+    const text = String(value).trim();
+    return text ? text : undefined;
+  };
+
+  server.get(
+    "/tenants/:tenantId/reports/balance-sheet",
+    { preHandler: tenantMiddleware },
+    async (request, reply) => {
+      try {
+        const { tenantId } = request.params as { tenantId: string };
+        const query = request.query as ReportQuery & { code?: string };
+        const parsedYear = parseOptionalNumber(query.year);
+        const parsedMonth = parseOptionalNumber(query.month);
+        const shouldIgnoreDates = parsedYear != null || parsedMonth != null;
+        return await service.execute(tenantId, {
+          from: query.from,
+          to: query.to,
+          client: parseOptionalText(query.client ?? query.code),
+          year: parsedYear,
+          month: parsedMonth,
+          startDate: shouldIgnoreDates ? undefined : parseOptionalText(query.startDate ?? query.startdate),
+          endDate: shouldIgnoreDates ? undefined : parseOptionalText(query.endDate ?? query.enddate)
+        });
+      } catch (error) {
+        return reply.status(400).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  server.get(
+    "/tenants/:tenantId/reports/balance-sheet/details",
+    { preHandler: tenantMiddleware },
+    async (request, reply) => {
+      try {
+        const { tenantId } = request.params as { tenantId: string };
+        const query = request.query as ReportQuery & { code?: string };
+        const parsedYear = parseOptionalNumber(query.year);
+        const parsedMonth = parseOptionalNumber(query.month);
+        const shouldIgnoreDates = parsedYear != null || parsedMonth != null;
+        return await service.details(tenantId, {
+          from: query.from,
+          to: query.to,
+          client: parseOptionalText(query.client ?? query.code),
+          category: parseOptionalText(query.category),
+          offset: parseOptionalNumber(query.offset),
+          limit: parseOptionalNumber(query.limit),
+          year: parsedYear,
+          month: parsedMonth,
+          startDate: shouldIgnoreDates ? undefined : parseOptionalText(query.startDate ?? query.startdate),
+          endDate: shouldIgnoreDates ? undefined : parseOptionalText(query.endDate ?? query.enddate)
+        });
+      } catch (error) {
+        return reply.status(400).send({ message: (error as Error).message });
+      }
+    }
+  );
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@fincore/db-postgres",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/client.ts",
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}

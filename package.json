@@ -1,0 +1,17 @@
+{
+  "name": "fincore",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "db:up": "docker compose -f infra/docker-compose.yml up -d",
+    "db:down": "docker compose -f infra/docker-compose.yml down",
+    "dev": "turbo run dev --filter=@fincore/frontend-next --filter=@fincore/backend-nest --parallel",
+    "build": "turbo run build --filter=@fincore/frontend-next --filter=@fincore/backend-nest",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3"
+  }
+}
