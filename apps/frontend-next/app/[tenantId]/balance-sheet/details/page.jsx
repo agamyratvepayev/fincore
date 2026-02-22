@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { resolveTenant } from "../../../../lib/platform/tenant/resolve-tenant";
 import {
   fetchBalanceDetails,
+  fetchBalanceMaterialTotals,
   fetchBalanceTotals,
   fetchIncomeDateFilters
 } from "../../../../lib/platform/reporting/api";
@@ -45,6 +46,8 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   if (!tenant) notFound();
 
   const rawQuery = (await searchParams) ?? {};
+  const kind = rawQuery.kind === "material" ? "material" : "cash";
+  const showAmountColumn = kind === "material";
   const category = rawQuery.category ? String(rawQuery.category) : "1";
   const year = rawQuery.year ? String(rawQuery.year) : "";
   const month = rawQuery.month ? String(rawQuery.month) : "";
@@ -54,9 +57,10 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const limit = Math.max(1, toNumber(rawQuery.limit, 50));
   const offset = Math.max(0, toNumber(rawQuery.offset, 0));
 
-  const [dateFilterData, detailsData, totalsData] = await Promise.all([
+  const [dateFilterData, detailsData, totalsData, materialTotalsData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
     fetchBalanceDetails(tenantId, {
+      kind,
       category,
       year: year || undefined,
       month: month || undefined,
@@ -68,7 +72,13 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
       month: month || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined
-    }).catch(() => ({ lines: [] }))
+    }).catch(() => ({ lines: [] })),
+    fetchBalanceMaterialTotals(tenantId, {
+      year: year || undefined,
+      month: month || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined
+    }).catch(() => ({ categories: [] }))
   ]);
 
   const allRows = Array.isArray(detailsData) ? detailsData : [];
@@ -78,8 +88,10 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const hasNext = filteredRows.length > offset + limit;
 
   const totalsRows = Array.isArray(totalsData?.lines) ? totalsData.lines : [];
+  const materialRows = Array.isArray(materialTotalsData?.categories) ? materialTotalsData.categories : [];
+  const sourceRows = kind === "material" ? materialRows : totalsRows;
   const categoryName = String(
-    totalsRows.find((row) => String(row.code ?? "") === String(category))?.label ??
+    sourceRows.find((row) => String(row.code ?? "") === String(category))?.label ??
       allRows[0]?.NAME ??
       `Category ${category}`
   ).trim();
@@ -90,6 +102,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
 
   const backQuery = buildQuery({ year, month, startDate, endDate });
   const prevQuery = buildQuery({
+    kind,
     category,
     year,
     month,
@@ -100,6 +113,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
     offset: Math.max(0, offset - limit)
   });
   const nextQuery = buildQuery({
+    kind,
     category,
     year,
     month,
@@ -114,8 +128,8 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   allRows.forEach((row) => {
     const key = normalizeType(row) || "(No Type)";
     const current = typeSummaryMap.get(key) ?? { tmt: 0, usd: 0, count: 0 };
-    current.tmt += Number(row.AMOUNT ?? row.amount ?? 0);
-    current.usd += Number(row.REPORTNET ?? row.reportnet ?? 0);
+    current.tmt += Number(row.AMOUNT ?? row.amount ?? row.OUTCOST ?? row.outcost ?? 0);
+    current.usd += Number(row.REPORTNET ?? row.reportnet ?? row.OUTCOSTCURR ?? row.outcostcurr ?? 0);
     current.count += 1;
     typeSummaryMap.set(key, current);
   });
@@ -148,6 +162,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
                   <td>
                     <Link
                       href={`/${tenantId}/balance-sheet/details?${buildQuery({
+                        kind,
                         category,
                         year,
                         month,
@@ -169,6 +184,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
                     <td>
                       <Link
                         href={`/${tenantId}/balance-sheet/details?${buildQuery({
+                          kind,
                           category,
                           year,
                           month,
@@ -194,8 +210,9 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
             <thead>
               <tr>
                 <th className="income-details-date-col" style={{ textAlign: "center" }}>Date</th>
-                <th style={{ textAlign: "center" }}>Type</th>
+                <th style={{ textAlign: "center" }}>{kind === "material" ? "Item" : "Type"}</th>
                 <th style={{ textAlign: "center" }}>Client</th>
+                {showAmountColumn ? <th style={{ textAlign: "center" }}>Amount</th> : null}
                 <th style={{ textAlign: "center" }}>Line Exp</th>
                 <th className="income-details-money-col">TMT</th>
                 <th className="income-details-money-col">USD</th>
@@ -204,7 +221,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: "center", color: "#64748b" }}>
+                  <td colSpan={showAmountColumn ? 7 : 6} style={{ textAlign: "center", color: "#64748b" }}>
                     No details
                   </td>
                 </tr>
@@ -212,11 +229,28 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
                 rows.map((row, idx) => (
                   <tr key={`row-${idx}`}>
                     <td className="income-details-date-col" style={{ textAlign: "center" }}>{isoDate(row.DATE_ ?? row.date_)}</td>
-                    <td style={{ textAlign: "center" }}>{String(row.TYPE_ ?? row.type_ ?? "-")}</td>
+                    <td style={{ textAlign: "center" }}>
+                      {String(row.ITEMNAME ?? row.itemname ?? row.TYPE_ ?? row.type_ ?? "-")}
+                    </td>
                     <td style={{ textAlign: "center" }}>{String(row.CLIENT ?? row.client ?? "-")}</td>
+                    {showAmountColumn ? (
+                      <td style={{ textAlign: "center" }}>{String(row.AMOUNT ?? row.amount ?? "-")}</td>
+                    ) : null}
                     <td style={{ textAlign: "center" }}>{String(row.LINEEXP ?? row.lineexp ?? "-")}</td>
-                    <td className="income-details-money-col">{money(row.AMOUNT ?? row.amount)}</td>
-                    <td className="income-details-money-col">{money(row.REPORTNET ?? row.reportnet)}</td>
+                    <td className="income-details-money-col">
+                      {money(
+                        kind === "material"
+                          ? row.OUTCOST ?? row.outcost ?? row.AMOUNT ?? row.amount
+                          : row.AMOUNT ?? row.amount ?? row.OUTCOST ?? row.outcost
+                      )}
+                    </td>
+                    <td className="income-details-money-col">
+                      {money(
+                        kind === "material"
+                          ? row.OUTCOSTCURR ?? row.outcostcurr ?? row.REPORTNET ?? row.reportnet
+                          : row.REPORTNET ?? row.reportnet ?? row.OUTCOSTCURR ?? row.outcostcurr
+                      )}
+                    </td>
                   </tr>
                 ))
               )}
@@ -269,7 +303,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
         years={years}
         category={category}
         limit={limit}
-        extraParams={{ type }}
+        extraParams={{ kind, type }}
       />
     </div>
   );

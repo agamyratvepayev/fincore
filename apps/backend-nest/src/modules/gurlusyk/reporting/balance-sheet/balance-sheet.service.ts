@@ -53,6 +53,7 @@ export class BalanceSheetService {
       category?: string;
       offset?: number;
       limit?: number;
+      kind?: "cash" | "material";
     }
   ) {
     await ensureReportingTenantReady(tenantId);
@@ -64,10 +65,44 @@ export class BalanceSheetService {
       category: filters?.category,
       offset: filters?.offset,
       limit: filters?.limit,
+      kind: filters?.kind,
       year: filters?.year,
       month: filters?.month,
       startDate: filters?.startDate,
       endDate: filters?.endDate
     });
+  }
+
+  async materialTotals(
+    tenantId: string,
+    filters?: {
+      from?: string;
+      to?: string;
+      year?: number;
+      month?: number;
+      startDate?: string;
+      endDate?: string;
+      client?: string;
+    }
+  ) {
+    await ensureReportingTenantReady(tenantId);
+    const period = buildReportPeriod(filters?.from, filters?.to);
+    const rows = await this.repository.getMaterialLines(period, {
+      year: filters?.year,
+      month: filters?.month,
+      startDate: filters?.startDate,
+      endDate: filters?.endDate
+    });
+
+    return {
+      tenantId,
+      report: "balance-sheet-material-totals",
+      period,
+      totals: {
+        totalTmt: rows.reduce((acc, row) => acc + Number(row.lineNet ?? row.amount ?? 0), 0),
+        totalUsd: rows.reduce((acc, row) => acc + Number(row.reportNet ?? 0), 0)
+      },
+      categories: rows
+    };
   }
 }

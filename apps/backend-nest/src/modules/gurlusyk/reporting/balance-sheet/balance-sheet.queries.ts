@@ -19,4 +19,12 @@ export function queryCashDetails(params: DateParams = {}) {
   return "EXEC GURBALCASDET @CATEGORY = :category, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
 }
 
+export function queryMaterialTotals(params: DateParams = {}) {
+  void params;
+  return "EXEC GURBALMATTOT @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
 
+export function queryMaterialDetails(params: DateParams = {}) {
+  void params;
+  return "EXEC GURBALMATDET @CATEGORY = :category, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
+}

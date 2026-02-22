@@ -31,7 +31,7 @@ export type ReportQuery = {
   endDate?: string;
   startdate?: string;
   enddate?: string;
-  kind?: "revenue" | "expense" | "balance";
+  kind?: "revenue" | "expense" | "balance" | "cash" | "material";
   category?: string;
   offset?: number;
   limit?: number;

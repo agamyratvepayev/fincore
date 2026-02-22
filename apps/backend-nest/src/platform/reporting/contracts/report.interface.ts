@@ -27,6 +27,7 @@ export interface IncomeReportingProvider {
 export interface BalanceReportingProvider {
   execute(tenantId: string, filters?: DateRangeFilters): Promise<ReportResponse>;
   details(tenantId: string, filters?: BalanceDetailsFilters): Promise<unknown>;
+  materialTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
 }
 
 export interface TenantReportingProvider {

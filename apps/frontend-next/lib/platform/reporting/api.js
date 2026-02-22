@@ -98,3 +98,10 @@ export async function fetchBalanceDetails(tenantId, filters = {}) {
   if (!retryResponse.ok) throw new Error(`Failed to load balance details (${retryResponse.status})`);
   return retryResponse.json();
 }
+
+export async function fetchBalanceMaterialTotals(tenantId, filters = {}) {
+  const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/material-totals`, filters);
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Failed to load balance material totals (${response.status})`);
+  return response.json();
+}
