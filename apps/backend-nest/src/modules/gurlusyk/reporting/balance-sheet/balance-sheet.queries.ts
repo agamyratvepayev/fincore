@@ -68,3 +68,13 @@ export function queryAdvanceDetails(params: DateParams = {}) {
   void params;
   return "EXEC GURBALADVDET @CODE = :code, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
 }
+
+export function queryIntangibleTotals(params: DateParams = {}) {
+  void params;
+  return "EXEC GURBALINTTOT @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
+export function queryIntangibleDetails(params: DateParams = {}) {
+  void params;
+  return "EXEC GURBALINTDET @CODE = :code, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
+}

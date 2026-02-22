@@ -31,7 +31,17 @@ export type ReportQuery = {
   endDate?: string;
   startdate?: string;
   enddate?: string;
-  kind?: "revenue" | "expense" | "balance" | "cash" | "material" | "credit" | "bio" | "loan" | "advance";
+  kind?:
+    | "revenue"
+    | "expense"
+    | "balance"
+    | "cash"
+    | "material"
+    | "credit"
+    | "bio"
+    | "loan"
+    | "advance"
+    | "intangible";
   category?: string;
   offset?: number;
   limit?: number;

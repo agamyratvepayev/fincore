@@ -9,6 +9,8 @@ import {
   queryCashTotals,
   queryCreditDetails,
   queryCreditTotals,
+  queryIntangibleDetails,
+  queryIntangibleTotals,
   queryLoanDetails,
   queryLoanTotals,
   queryMaterialDetails,
@@ -137,6 +139,20 @@ export class BalanceSheetRepository {
     return executeNamedQuery<Record<string, unknown>>(queryAdvanceDetails(params), params);
   }
 
+  async fetchIntangibleTotals(overrides?: DateParams) {
+    const params = this.dateParams(overrides);
+    return executeNamedQuery<Record<string, unknown>>(queryIntangibleTotals(params), params);
+  }
+
+  async fetchIntangibleDetails(code: string, overrides?: DateParams, page?: { offset?: number; limit?: number }) {
+    const params = {
+      code: String(code ?? "").trim(),
+      ...this.pageParams(page),
+      ...this.dateParams(overrides)
+    };
+    return executeNamedQuery<Record<string, unknown>>(queryIntangibleDetails(params), params);
+  }
+
   async getLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
     void period;
     const rows = await this.fetchCashTotals(overrides);
@@ -156,7 +172,7 @@ export class BalanceSheetRepository {
       category?: string;
       offset?: number;
       limit?: number;
-      kind?: "cash" | "material" | "credit" | "bio" | "loan" | "advance";
+      kind?: "cash" | "material" | "credit" | "bio" | "loan" | "advance" | "intangible";
     }
   ) {
     void period;
@@ -186,6 +202,12 @@ export class BalanceSheetRepository {
     }
     if (filters.kind === "advance") {
       return this.fetchAdvanceDetails(filters.category ?? "", filters, {
+        offset: filters.offset ?? 0,
+        limit: filters.limit ?? 100
+      });
+    }
+    if (filters.kind === "intangible") {
+      return this.fetchIntangibleDetails(filters.category ?? "", filters, {
         offset: filters.offset ?? 0,
         limit: filters.limit ?? 100
       });
@@ -275,6 +297,20 @@ export class BalanceSheetRepository {
         amount: Number(row.AMOUNT ?? row.amount ?? 0),
         lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
         reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0)
+      }))
+      .filter((row) => Math.abs(Number(row.amount ?? 0)) > 0.000001);
+  }
+
+  async getIntangibleLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
+    void period;
+    const rows = await this.fetchIntangibleTotals(overrides);
+    return rows
+      .map((row, index) => ({
+        code: String(row.CODE ?? row.code ?? `INT_${index + 1}`),
+        label: String(row.NAME ?? row.name ?? `Intangible ${index + 1}`),
+        amount: Number(row.AMOUNT ?? row.amount ?? 0),
+        lineNet: Number(row.OUTCOST ?? row.outcost ?? 0),
+        reportNet: Number(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0)
       }))
       .filter((row) => Math.abs(Number(row.amount ?? 0)) > 0.000001);
   }

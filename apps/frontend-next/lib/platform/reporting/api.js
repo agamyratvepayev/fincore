@@ -133,3 +133,10 @@ export async function fetchBalanceAdvanceTotals(tenantId, filters = {}) {
   if (!response.ok) throw new Error(`Failed to load balance advance totals (${response.status})`);
   return response.json();
 }
+
+export async function fetchBalanceIntangibleTotals(tenantId, filters = {}) {
+  const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/intangible-totals`, filters);
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Failed to load balance intangible totals (${response.status})`);
+  return response.json();
+}
