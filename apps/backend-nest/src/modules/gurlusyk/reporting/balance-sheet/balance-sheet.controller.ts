@@ -59,7 +59,12 @@ export async function balanceSheetController(
           from: query.from,
           to: query.to,
           client: parseOptionalText(query.client ?? query.code),
-          kind: parseOptionalText((query as Record<string, unknown>).kind) === "material" ? "material" : "cash",
+          kind:
+            parseOptionalText((query as Record<string, unknown>).kind) === "material"
+              ? "material"
+              : parseOptionalText((query as Record<string, unknown>).kind) === "credit"
+                ? "credit"
+                : "cash",
           category: parseOptionalText(query.category),
           offset: parseOptionalNumber(query.offset),
           limit: parseOptionalNumber(query.limit),
@@ -85,6 +90,31 @@ export async function balanceSheetController(
         const parsedMonth = parseOptionalNumber(query.month);
         const shouldIgnoreDates = parsedYear != null || parsedMonth != null;
         return await service.materialTotals(tenantId, {
+          from: query.from,
+          to: query.to,
+          client: parseOptionalText(query.client ?? query.code),
+          year: parsedYear,
+          month: parsedMonth,
+          startDate: shouldIgnoreDates ? undefined : parseOptionalText(query.startDate ?? query.startdate),
+          endDate: shouldIgnoreDates ? undefined : parseOptionalText(query.endDate ?? query.enddate)
+        });
+      } catch (error) {
+        return reply.status(400).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  server.get(
+    "/tenants/:tenantId/reports/balance-sheet/credit-totals",
+    { preHandler: tenantMiddleware },
+    async (request, reply) => {
+      try {
+        const { tenantId } = request.params as { tenantId: string };
+        const query = request.query as ReportQuery & { code?: string };
+        const parsedYear = parseOptionalNumber(query.year);
+        const parsedMonth = parseOptionalNumber(query.month);
+        const shouldIgnoreDates = parsedYear != null || parsedMonth != null;
+        return await service.creditTotals(tenantId, {
           from: query.from,
           to: query.to,
           client: parseOptionalText(query.client ?? query.code),

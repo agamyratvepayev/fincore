@@ -15,7 +15,7 @@ export type IncomeDetailsFilters = DateRangeFilters & {
 };
 
 export type BalanceDetailsFilters = DateRangeFilters & {
-  kind?: "cash" | "material";
+  kind?: "cash" | "material" | "credit";
   category?: string;
   offset?: number;
   limit?: number;

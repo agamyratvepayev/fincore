@@ -3,6 +3,7 @@ import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { resolveTenant } from "../../../lib/platform/tenant/resolve-tenant";
 import {
+  fetchBalanceCreditTotals,
   fetchBalanceMaterialTotals,
   fetchBalanceTotals,
   fetchIncomeDateFilters
@@ -36,9 +37,11 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
   const endDate = rawQuery.endDate ? String(rawQuery.endDate) : "";
   const expandCash = rawQuery.expandCash === "1";
   const expandMaterial = rawQuery.expandMaterial === "1";
+  const expandCredit = rawQuery.expandCredit === "1";
   const selectedGroup = rawQuery.group ? String(rawQuery.group) : "";
+  const selectedCreditGroup = rawQuery.creditGroup ? String(rawQuery.creditGroup) : "";
 
-  const [dateFilterData, totalsData, materialTotalsData] = await Promise.all([
+  const [dateFilterData, totalsData, materialTotalsData, creditTotalsData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
     fetchBalanceTotals(tenantId, {
       year: year || undefined,
@@ -47,6 +50,12 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
       endDate: endDate || undefined
     }),
     fetchBalanceMaterialTotals(tenantId, {
+      year: year || undefined,
+      month: month || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined
+    }),
+    fetchBalanceCreditTotals(tenantId, {
       year: year || undefined,
       month: month || undefined,
       startDate: startDate || undefined,
@@ -67,12 +76,28 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
     groupMap.set(group, current);
   });
   const groups = Array.from(groupMap.entries()).map(([name, value]) => ({ name, ...value }));
+
   const materialRows = Array.isArray(materialTotalsData?.categories) ? materialTotalsData.categories : [];
   const materialTotalTmt = Number(materialTotalsData?.totals?.totalTmt ?? 0);
   const materialTotalUsd = Number(materialTotalsData?.totals?.totalUsd ?? 0);
 
+  const creditRows = Array.isArray(creditTotalsData?.categories) ? creditTotalsData.categories : [];
+  const creditTotalTmt = Number(creditTotalsData?.totals?.totalTmt ?? 0);
+  const creditTotalUsd = Number(creditTotalsData?.totals?.totalUsd ?? 0);
+  const creditGroupMap = new Map();
+  creditRows.forEach((row) => {
+    const group = String(row.group ?? "").trim() || "BEYLEKILER";
+    const current = creditGroupMap.get(group) ?? { lineNet: 0, reportNet: 0, rows: [] };
+    current.lineNet += Number(row.lineNet ?? row.amount ?? 0);
+    current.reportNet += Number(row.reportNet ?? 0);
+    current.rows.push(row);
+    creditGroupMap.set(group, current);
+  });
+  const creditGroups = Array.from(creditGroupMap.entries()).map(([name, value]) => ({ name, ...value }));
+
   const years = Array.isArray(dateFilterData?.years) ? dateFilterData.years : [];
   const months = Array.isArray(dateFilterData?.months) ? dateFilterData.months : [];
+  const hasAnyRows = rows.length > 0 || materialRows.length > 0 || creditRows.length > 0;
 
   return (
     <div className="layout-grid income-layout-grid income-totals-layout">
@@ -90,7 +115,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 ? (
+              {!hasAnyRows ? (
                 <tr>
                   <td colSpan={3} style={{ textAlign: "center", color: "#64748b" }}>
                     No data
@@ -98,15 +123,17 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                 </tr>
               ) : (
                 <>
-                <tr className="income-main-total-row balance-category-row">
-                  <td style={{ textAlign: "left" }}>
-                    <Link
-                      href={`/${tenantId}/balance-sheet?${buildQuery({
-                        expandCash: expandCash ? "" : "1",
-                        expandMaterial: expandMaterial ? "1" : "",
-                        year,
-                        month,
-                        startDate,
+                  <tr className="income-main-total-row balance-category-row">
+                    <td style={{ textAlign: "left" }}>
+                      <Link
+                        href={`/${tenantId}/balance-sheet?${buildQuery({
+                          expandCash: expandCash ? "" : "1",
+                          expandMaterial: expandMaterial ? "1" : "",
+                          expandCredit: expandCredit ? "1" : "",
+                          creditGroup: selectedCreditGroup || "",
+                          year,
+                          month,
+                          startDate,
                           endDate
                         })}`}
                         className="income-category-link balance-level-link balance-level-category"
@@ -118,18 +145,21 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                     <td>{money(totalTmt)}</td>
                     <td>{money(totalUsd)}</td>
                   </tr>
+
                   {expandCash
                     ? groups.map((group) => (
                         <Fragment key={`group-wrap-${group.name}`}>
                           <tr key={`group-${group.name}`} className="row-expense balance-group-row">
                             <td style={{ textAlign: "left" }}>
                               <Link
-                              href={`/${tenantId}/balance-sheet?${buildQuery({
-                                expandCash: "1",
-                                expandMaterial: expandMaterial ? "1" : "",
-                                group: selectedGroup === group.name ? "" : group.name,
-                                year,
-                                month,
+                                href={`/${tenantId}/balance-sheet?${buildQuery({
+                                  expandCash: "1",
+                                  expandMaterial: expandMaterial ? "1" : "",
+                                  expandCredit: expandCredit ? "1" : "",
+                                  creditGroup: selectedCreditGroup || "",
+                                  group: selectedGroup === group.name ? "" : group.name,
+                                  year,
+                                  month,
                                   startDate,
                                   endDate
                                 })}`}
@@ -145,13 +175,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                           {selectedGroup === group.name
                             ? group.rows.map((row, idx) => {
                                 const category = String(row.code ?? idx + 1);
-                                const detailsQuery = buildQuery({
-                                  category,
-                                  year,
-                                  month,
-                                  startDate,
-                                  endDate
-                                });
+                                const detailsQuery = buildQuery({ category, year, month, startDate, endDate });
                                 return (
                                   <tr key={`${group.name}-${category}-${idx}`} className="income-category-row balance-name-row">
                                     <td style={{ textAlign: "left" }}>
@@ -169,58 +193,138 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                               })
                             : null}
                         </Fragment>
-                    ))
-                  : null}
+                      ))
+                    : null}
 
-                <tr className="income-main-total-row balance-category-row">
-                  <td style={{ textAlign: "left" }}>
-                    <Link
-                      href={`/${tenantId}/balance-sheet?${buildQuery({
-                        expandCash: expandCash ? "1" : "",
-                        group: selectedGroup || "",
-                        expandMaterial: expandMaterial ? "" : "1",
-                        year,
-                        month,
-                        startDate,
-                        endDate
-                      })}`}
-                      className="income-category-link balance-level-link balance-level-category"
-                    >
-                      <span className="balance-level-indicator">{expandMaterial ? "▾" : "▸"}</span>
-                      MATERIALLAR
-                    </Link>
-                  </td>
-                  <td>{money(materialTotalTmt)}</td>
-                  <td>{money(materialTotalUsd)}</td>
-                </tr>
-                {expandMaterial
-                  ? materialRows.map((row, idx) => (
-                      <tr key={`mat-${idx}`} className="income-category-row balance-name-row">
-                        <td style={{ textAlign: "left" }}>
-                          <Link
-                            href={`/${tenantId}/balance-sheet/details?${buildQuery({
-                              kind: "material",
-                              category: String(row.code ?? idx + 1),
-                              year,
-                              month,
-                              startDate,
-                              endDate
-                            })}`}
-                            className="income-category-link balance-level-link balance-level-name"
-                          >
-                            {String(row.label ?? "-")}
-                          </Link>
-                        </td>
-                        <td>{money(row.lineNet ?? row.amount)}</td>
-                        <td>{money(row.reportNet)}</td>
-                      </tr>
-                    ))
-                  : null}
-              </>
-            )}
-          </tbody>
-        </table>
-      </div>
+                  <tr className="income-main-total-row balance-category-row">
+                    <td style={{ textAlign: "left" }}>
+                      <Link
+                        href={`/${tenantId}/balance-sheet?${buildQuery({
+                          expandCash: expandCash ? "1" : "",
+                          group: selectedGroup || "",
+                          expandMaterial: expandMaterial ? "" : "1",
+                          expandCredit: expandCredit ? "1" : "",
+                          creditGroup: selectedCreditGroup || "",
+                          year,
+                          month,
+                          startDate,
+                          endDate
+                        })}`}
+                        className="income-category-link balance-level-link balance-level-category"
+                      >
+                        <span className="balance-level-indicator">{expandMaterial ? "▾" : "▸"}</span>
+                        MATERIALLAR
+                      </Link>
+                    </td>
+                    <td>{money(materialTotalTmt)}</td>
+                    <td>{money(materialTotalUsd)}</td>
+                  </tr>
+
+                  {expandMaterial
+                    ? materialRows.map((row, idx) => (
+                        <tr key={`mat-${idx}`} className="income-category-row balance-name-row">
+                          <td style={{ textAlign: "left" }}>
+                            <Link
+                              href={`/${tenantId}/balance-sheet/details?${buildQuery({
+                                kind: "material",
+                                category: String(row.code ?? idx + 1),
+                                year,
+                                month,
+                                startDate,
+                                endDate
+                              })}`}
+                              className="income-category-link balance-level-link balance-level-name"
+                            >
+                              {String(row.label ?? "-")}
+                            </Link>
+                          </td>
+                          <td>{money(row.lineNet ?? row.amount)}</td>
+                          <td>{money(row.reportNet)}</td>
+                        </tr>
+                      ))
+                    : null}
+
+                  <tr className="income-main-total-row balance-category-row">
+                    <td style={{ textAlign: "left" }}>
+                      <Link
+                        href={`/${tenantId}/balance-sheet?${buildQuery({
+                          expandCash: expandCash ? "1" : "",
+                          group: selectedGroup || "",
+                          expandMaterial: expandMaterial ? "1" : "",
+                          expandCredit: expandCredit ? "" : "1",
+                          creditGroup: selectedCreditGroup || "",
+                          year,
+                          month,
+                          startDate,
+                          endDate
+                        })}`}
+                        className="income-category-link balance-level-link balance-level-category"
+                      >
+                        <span className="balance-level-indicator">{expandCredit ? "▾" : "▸"}</span>
+                        ALGYLARYMYZ
+                      </Link>
+                    </td>
+                    <td>{money(creditTotalTmt)}</td>
+                    <td>{money(creditTotalUsd)}</td>
+                  </tr>
+
+                  {expandCredit
+                    ? creditGroups.map((group) => (
+                        <Fragment key={`credit-group-wrap-${group.name}`}>
+                          <tr key={`credit-group-${group.name}`} className="row-expense balance-group-row">
+                            <td style={{ textAlign: "left" }}>
+                              <Link
+                                href={`/${tenantId}/balance-sheet?${buildQuery({
+                                  expandCash: expandCash ? "1" : "",
+                                  group: selectedGroup || "",
+                                  expandMaterial: expandMaterial ? "1" : "",
+                                  expandCredit: "1",
+                                  creditGroup: selectedCreditGroup === group.name ? "" : group.name,
+                                  year,
+                                  month,
+                                  startDate,
+                                  endDate
+                                })}`}
+                                className="income-category-link balance-level-link balance-level-group"
+                              >
+                                <span className="balance-level-indicator">{selectedCreditGroup === group.name ? "▾" : "▸"}</span>
+                                {group.name}
+                              </Link>
+                            </td>
+                            <td>{money(group.lineNet)}</td>
+                            <td>{money(group.reportNet)}</td>
+                          </tr>
+                          {selectedCreditGroup === group.name
+                            ? group.rows.map((row, idx) => (
+                                <tr key={`credit-name-${group.name}-${idx}`} className="income-category-row balance-name-row">
+                                  <td style={{ textAlign: "left" }}>
+                                    <Link
+                                      href={`/${tenantId}/balance-sheet/details?${buildQuery({
+                                        kind: "credit",
+                                        category: String(row.code ?? ""),
+                                        year,
+                                        month,
+                                        startDate,
+                                        endDate
+                                      })}`}
+                                      className="income-category-link balance-level-link balance-level-name"
+                                    >
+                                      {String(row.label ?? "-")}
+                                    </Link>
+                                  </td>
+                                  <td>{money(row.lineNet ?? row.amount)}</td>
+                                  <td>{money(row.reportNet)}</td>
+                                </tr>
+                              ))
+                            : null}
+                        </Fragment>
+                      ))
+                    : null}
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <IncomeFiltersCard

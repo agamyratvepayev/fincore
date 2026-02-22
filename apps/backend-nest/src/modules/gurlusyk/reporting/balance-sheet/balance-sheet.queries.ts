@@ -28,3 +28,13 @@ export function queryMaterialDetails(params: DateParams = {}) {
   void params;
   return "EXEC GURBALMATDET @CATEGORY = :category, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
 }
+
+export function queryCreditTotals(params: DateParams = {}) {
+  void params;
+  return "EXEC GURBALCRETOT @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
+export function queryCreditDetails(params: DateParams = {}) {
+  void params;
+  return "EXEC GURBALCREDET @CODE = :code, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
+}
