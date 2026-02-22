@@ -242,6 +242,11 @@ thead th {
   background: #dceee4;
 }
 
+.row-expense td,
+.row-profit td {
+  font-size: 15px;
+}
+
 .dot {
   width: 8px;
   height: 8px;
@@ -410,7 +415,7 @@ thead th {
 }
 
 .income-main-total-row td {
-  font-size: 14px;
+  font-size: 15px;
   color: #0f172a;
 }
 
@@ -542,16 +547,25 @@ thead th {
   line-height: 1;
 }
 
-.income-details-table thead th:nth-child(5),
-.income-details-table thead th:nth-child(6) {
+.income-details-table .income-details-money-col {
   text-align: right;
+  padding-right: 12px;
+}
+
+.income-details-table thead .income-details-money-col {
   padding-right: 40px;
 }
 
-.income-details-table tbody td:nth-child(5),
-.income-details-table tbody td:nth-child(6) {
-  text-align: right;
-  padding-right: 12px;
+.income-details-table .income-details-date-col {
+  width: 112px;
+  min-width: 112px;
+  white-space: nowrap;
+}
+
+@media (max-width: 1440px) {
+  .income-details-table thead .income-details-money-col {
+    padding-right: 24px;
+  }
 }
 
 .income-specode-wrap {

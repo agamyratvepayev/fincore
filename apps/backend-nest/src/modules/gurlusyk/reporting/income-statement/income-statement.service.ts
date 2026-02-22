@@ -121,6 +121,43 @@ export class IncomeStatementService {
     };
   }
 
+  async expenseTotals(
+    tenantId: string,
+    filters?: {
+      from?: string;
+      to?: string;
+      year?: number;
+      month?: number;
+      startDate?: string;
+      endDate?: string;
+      client?: string;
+    }
+  ) {
+    await ensureReportingTenantReady(tenantId);
+    const period = buildReportPeriod(filters?.from, filters?.to);
+    const rows = await this.repository.getExpenseTotals(
+      period,
+      {
+        year: filters?.year,
+        month: filters?.month,
+        startDate: filters?.startDate,
+        endDate: filters?.endDate
+      },
+      filters?.client || getDefaultClientCode(tenantId)
+    );
+
+    return {
+      tenantId,
+      report: "income-statement-expense-totals",
+      period,
+      totals: {
+        totalTmt: rows.reduce((acc, row) => acc + row.lineNet, 0),
+        totalUsd: rows.reduce((acc, row) => acc + row.reportNet, 0)
+      },
+      categories: rows
+    };
+  }
+
   async details(
     tenantId: string,
     kind: "revenue" | "expense",
@@ -135,29 +172,29 @@ export class IncomeStatementService {
     offset?: number,
     limit?: number
   ) {
-    void kind;
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(from, to);
 
     const parsedCategory = category == null || String(category).trim() === "" ? undefined : Number(category);
 
-    const rows = await this.repository.getRevenueDetails(
-      period,
-      {
-        category: Number.isFinite(parsedCategory) ? parsedCategory : undefined,
-        offset,
-        limit,
-        year,
-        month,
-        startDate,
-        endDate
-      },
-      clientCode || getDefaultClientCode(tenantId)
-    );
+    const detailParams = {
+      category: Number.isFinite(parsedCategory) ? parsedCategory : undefined,
+      offset,
+      limit,
+      year,
+      month,
+      startDate,
+      endDate
+    };
+    const selectedClientCode = clientCode || getDefaultClientCode(tenantId);
+    const rows =
+      kind === "expense"
+        ? await this.repository.getExpenseDetails(period, detailParams, selectedClientCode)
+        : await this.repository.getRevenueDetails(period, detailParams, selectedClientCode);
 
     return {
       tenantId,
-      report: "income-statement-revenue-details",
+      report: kind === "expense" ? "income-statement-expense-details" : "income-statement-revenue-details",
       period,
       paging: {
         offset: offset ?? 0,

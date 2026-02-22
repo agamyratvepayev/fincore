@@ -88,13 +88,32 @@ export class ReportingController {
     }
   }
 
+  @Get("/tenants/:tenantId/reports/income-statement/expense-totals")
+  async incomeExpenseTotals(@Param("tenantId") tenantId: string, @Query() query: ReportQuery) {
+    const provider = this.assertSupportedTenant(tenantId);
+    try {
+      return await provider.income.expenseTotals(tenantId, {
+        from: query.from,
+        to: query.to,
+        client: this.parseOptionalText(query.client) ?? this.queryCode(query),
+        year: this.parseOptionalNumber(query.year),
+        month: this.parseOptionalNumber(query.month),
+        startDate: this.parseOptionalText(query.startDate ?? query.startdate),
+        endDate: this.parseOptionalText(query.endDate ?? query.enddate)
+      });
+    } catch (error) {
+      throw new BadRequestException((error as Error).message);
+    }
+  }
+
   @Get("/tenants/:tenantId/reports/income-statement/details")
   async incomeDetails(@Param("tenantId") tenantId: string, @Query() query: ReportQuery) {
     const provider = this.assertSupportedTenant(tenantId);
     try {
+      const kind = query.kind === "expense" ? "expense" : "revenue";
       return await provider.income.details(
         tenantId,
-        "revenue",
+        kind,
         query.from,
         query.to,
         this.parseOptionalText(query.client) ?? this.queryCode(query),

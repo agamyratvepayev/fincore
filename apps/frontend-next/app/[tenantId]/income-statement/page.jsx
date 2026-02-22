@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { resolveTenant } from "../../../lib/platform/tenant/resolve-tenant";
-import { fetchIncomeClients, fetchIncomeDateFilters, fetchIncomeRevenueTotals } from "../../../lib/platform/reporting/api";
+import {
+  fetchIncomeClients,
+  fetchIncomeDateFilters,
+  fetchIncomeExpenseTotals,
+  fetchIncomeRevenueTotals
+} from "../../../lib/platform/reporting/api";
 import IncomeFiltersCard from "../../../components/income-filters-card";
 
 function toNumber(value, fallback) {
@@ -37,7 +42,7 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
   const endDate = rawQuery.endDate ? String(rawQuery.endDate) : "";
   const code = rawQuery.code ? String(rawQuery.code) : defaultClientCode;
 
-  const [dateFilterData, clientsData, totalsData] = await Promise.all([
+  const [dateFilterData, clientsData, revenueData, expenseData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
     fetchIncomeClients(tenantId).catch(() => []),
     fetchIncomeRevenueTotals(tenantId, {
@@ -46,12 +51,24 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
       month: month || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined
+    }),
+    fetchIncomeExpenseTotals(tenantId, {
+      code: code || undefined,
+      year: year || undefined,
+      month: month || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined
     })
   ]);
 
-  const categories = Array.isArray(totalsData?.categories) ? totalsData.categories : [];
-  const totalTmt = Number(totalsData?.totals?.totalTmt ?? 0);
-  const totalUsd = Number(totalsData?.totals?.totalUsd ?? 0);
+  const revenueCategories = Array.isArray(revenueData?.categories) ? revenueData.categories : [];
+  const expenseCategories = Array.isArray(expenseData?.categories) ? expenseData.categories : [];
+  const revenueTotalTmt = Number(revenueData?.totals?.totalTmt ?? 0);
+  const revenueTotalUsd = Number(revenueData?.totals?.totalUsd ?? 0);
+  const expenseTotalTmt = Number(expenseData?.totals?.totalTmt ?? 0);
+  const expenseTotalUsd = Number(expenseData?.totals?.totalUsd ?? 0);
+  const profitTotalTmt = revenueTotalTmt - expenseTotalTmt;
+  const profitTotalUsd = revenueTotalUsd - expenseTotalUsd;
   const years = Array.isArray(dateFilterData?.years) ? dateFilterData.years : [];
   const months = Array.isArray(dateFilterData?.months) ? dateFilterData.months : [];
   const clients = Array.isArray(clientsData) ? clientsData : [];
@@ -76,7 +93,7 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
             </tr>
           </thead>
           <tbody>
-            {categories.length === 0 ? (
+            {revenueCategories.length === 0 && expenseCategories.length === 0 ? (
               <tr>
                 <td colSpan={3} style={{ textAlign: "center", color: "#64748b" }}>
                   No data
@@ -86,12 +103,13 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
               <>
                 <tr className="income-main-total-row">
                   <td style={{ textAlign: "left" }}>Girdeji</td>
-                  <td>{money(totalTmt)}</td>
-                  <td>{money(totalUsd)}</td>
+                  <td>{money(revenueTotalTmt)}</td>
+                  <td>{money(revenueTotalUsd)}</td>
                 </tr>
-                {categories.map((row, idx) => {
+                {revenueCategories.map((row, idx) => {
                   const id = toNumber(row.id, idx + 1);
                   const detailsQuery = buildQuery({
+                    kind: "revenue",
                     category: id,
                     code,
                     year,
@@ -112,6 +130,40 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
                     </tr>
                   );
                 })}
+                <tr className="row-expense">
+                  <td style={{ textAlign: "left" }}>Cykdajy</td>
+                  <td>{money(expenseTotalTmt)}</td>
+                  <td>{money(expenseTotalUsd)}</td>
+                </tr>
+                {expenseCategories.map((row, idx) => {
+                  const id = toNumber(row.id, idx + 1);
+                  const detailsQuery = buildQuery({
+                    kind: "expense",
+                    category: id,
+                    code,
+                    year,
+                    month,
+                    startDate,
+                    endDate
+                  });
+                  return (
+                    <tr key={`expense-${id}-${idx}`} className="income-category-row">
+                      <td style={{ textAlign: "left" }}>
+                        <Link href={`/${tenantId}/income-statement/details?${detailsQuery}`} className="income-category-link">
+                          <span className="dot red"></span>
+                          {row.name || "-"}
+                        </Link>
+                      </td>
+                      <td>{money(row.lineNet)}</td>
+                      <td>{money(row.reportNet)}</td>
+                    </tr>
+                  );
+                })}
+                <tr className="row-profit">
+                  <td style={{ textAlign: "left" }}>Peyda</td>
+                  <td>{money(profitTotalTmt)}</td>
+                  <td>{money(profitTotalUsd)}</td>
+                </tr>
               </>
             )}
           </tbody>

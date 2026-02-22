@@ -84,15 +84,39 @@ export async function incomeStatementController(
   );
 
   server.get(
+    "/tenants/:tenantId/reports/income-statement/expense-totals",
+    { preHandler: tenantMiddleware },
+    async (request, reply) => {
+      try {
+        const { tenantId } = request.params as { tenantId: string };
+        const query = request.query as ReportQuery & { code?: string };
+
+        return await service.expenseTotals(tenantId, {
+          from: query.from,
+          to: query.to,
+          client: parseOptionalText(query.client ?? query.code),
+          year: parseOptionalNumber(query.year),
+          month: parseOptionalNumber(query.month),
+          startDate: parseOptionalText(query.startDate ?? query.startdate),
+          endDate: parseOptionalText(query.endDate ?? query.enddate)
+        });
+      } catch (error) {
+        return reply.status(400).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  server.get(
     "/tenants/:tenantId/reports/income-statement/details",
     { preHandler: tenantMiddleware },
     async (request, reply) => {
       try {
         const { tenantId } = request.params as { tenantId: string };
         const query = request.query as ReportQuery & { code?: string };
+        const kind = query.kind === "expense" ? "expense" : "revenue";
         return await service.details(
           tenantId,
-          "revenue",
+          kind,
           query.from,
           query.to,
           parseOptionalText(query.client ?? query.code),
