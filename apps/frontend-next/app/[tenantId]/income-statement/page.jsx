@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { resolveTenant } from "../../../lib/platform/tenant/resolve-tenant";
 import {
+  fetchIncomeBalanceTotals,
   fetchIncomeClients,
   fetchIncomeDateFilters,
   fetchIncomeExpenseTotals,
@@ -42,7 +43,7 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
   const endDate = rawQuery.endDate ? String(rawQuery.endDate) : "";
   const code = rawQuery.code ? String(rawQuery.code) : defaultClientCode;
 
-  const [dateFilterData, clientsData, revenueData, expenseData] = await Promise.all([
+  const [dateFilterData, clientsData, revenueData, expenseData, balanceData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
     fetchIncomeClients(tenantId).catch(() => []),
     fetchIncomeRevenueTotals(tenantId, {
@@ -53,6 +54,13 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
       endDate: endDate || undefined
     }),
     fetchIncomeExpenseTotals(tenantId, {
+      code: code || undefined,
+      year: year || undefined,
+      month: month || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined
+    }),
+    fetchIncomeBalanceTotals(tenantId, {
       code: code || undefined,
       year: year || undefined,
       month: month || undefined,
@@ -69,6 +77,9 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
   const expenseTotalUsd = Number(expenseData?.totals?.totalUsd ?? 0);
   const profitTotalTmt = revenueTotalTmt - expenseTotalTmt;
   const profitTotalUsd = revenueTotalUsd - expenseTotalUsd;
+  const balanceCategories = Array.isArray(balanceData?.categories) ? balanceData.categories : [];
+  const balanceTotalTmt = Number(balanceData?.totals?.totalTmt ?? 0);
+  const balanceTotalUsd = Number(balanceData?.totals?.totalUsd ?? 0);
   const years = Array.isArray(dateFilterData?.years) ? dateFilterData.years : [];
   const months = Array.isArray(dateFilterData?.months) ? dateFilterData.months : [];
   const clients = Array.isArray(clientsData) ? clientsData : [];
@@ -80,94 +91,152 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
 
   return (
     <div className="layout-grid income-layout-grid income-totals-layout">
-      <div className="panel income-panel">
-        <div className="panel-title income-panel-title">
-          <div className="income-title-client">{(selectedClientName || code).toUpperCase()}</div>
-        </div>
-        <table className="income-table">
-          <thead>
-            <tr>
-              <th style={{ textAlign: "left" }}></th>
-              <th>TMT</th>
-              <th>USD</th>
-            </tr>
-          </thead>
-          <tbody>
-            {revenueCategories.length === 0 && expenseCategories.length === 0 ? (
+      <div>
+        <div className="panel income-panel">
+          <div className="panel-title income-panel-title">
+            <div className="income-title-client">{(selectedClientName || code).toUpperCase()}</div>
+          </div>
+          <table className="income-table">
+            <thead>
               <tr>
-                <td colSpan={3} style={{ textAlign: "center", color: "#64748b" }}>
-                  No data
-                </td>
+                <th style={{ textAlign: "left" }}></th>
+                <th>TMT</th>
+                <th>USD</th>
               </tr>
-            ) : (
-              <>
-                <tr className="income-main-total-row">
-                  <td style={{ textAlign: "left" }}>Girdeji</td>
-                  <td>{money(revenueTotalTmt)}</td>
-                  <td>{money(revenueTotalUsd)}</td>
+            </thead>
+            <tbody>
+              {revenueCategories.length === 0 && expenseCategories.length === 0 ? (
+                <tr>
+                  <td colSpan={3} style={{ textAlign: "center", color: "#64748b" }}>
+                    No data
+                  </td>
                 </tr>
-                {revenueCategories.map((row, idx) => {
-                  const id = toNumber(row.id, idx + 1);
-                  const detailsQuery = buildQuery({
-                    kind: "revenue",
-                    category: id,
-                    code,
-                    year,
-                    month,
-                    startDate,
-                    endDate
-                  });
-                  return (
-                    <tr key={`${id}-${idx}`} className="income-category-row">
-                      <td style={{ textAlign: "left" }}>
-                        <Link href={`/${tenantId}/income-statement/details?${detailsQuery}`} className="income-category-link">
-                          <span className="dot"></span>
-                          {row.name || "-"}
-                        </Link>
-                      </td>
-                      <td>{money(row.lineNet)}</td>
-                      <td>{money(row.reportNet)}</td>
-                    </tr>
-                  );
-                })}
-                <tr className="row-expense">
-                  <td style={{ textAlign: "left" }}>Cykdajy</td>
-                  <td>{money(expenseTotalTmt)}</td>
-                  <td>{money(expenseTotalUsd)}</td>
+              ) : (
+                <>
+                  <tr className="income-main-total-row">
+                    <td style={{ textAlign: "left" }}>Girdeji</td>
+                    <td>{money(revenueTotalTmt)}</td>
+                    <td>{money(revenueTotalUsd)}</td>
+                  </tr>
+                  {revenueCategories.map((row, idx) => {
+                    const id = toNumber(row.id, idx + 1);
+                    const detailsQuery = buildQuery({
+                      kind: "revenue",
+                      category: id,
+                      code,
+                      year,
+                      month,
+                      startDate,
+                      endDate
+                    });
+                    return (
+                      <tr key={`${id}-${idx}`} className="income-category-row">
+                        <td style={{ textAlign: "left" }}>
+                          <Link href={`/${tenantId}/income-statement/details?${detailsQuery}`} className="income-category-link">
+                            <span className="dot"></span>
+                            {row.name || "-"}
+                          </Link>
+                        </td>
+                        <td>{money(row.lineNet)}</td>
+                        <td>{money(row.reportNet)}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="row-expense">
+                    <td style={{ textAlign: "left" }}>Cykdajy</td>
+                    <td>{money(expenseTotalTmt)}</td>
+                    <td>{money(expenseTotalUsd)}</td>
+                  </tr>
+                  {expenseCategories.map((row, idx) => {
+                    const id = toNumber(row.id, idx + 1);
+                    const detailsQuery = buildQuery({
+                      kind: "expense",
+                      category: id,
+                      code,
+                      year,
+                      month,
+                      startDate,
+                      endDate
+                    });
+                    return (
+                      <tr key={`expense-${id}-${idx}`} className="income-category-row">
+                        <td style={{ textAlign: "left" }}>
+                          <Link href={`/${tenantId}/income-statement/details?${detailsQuery}`} className="income-category-link">
+                            <span className="dot red"></span>
+                            {row.name || "-"}
+                          </Link>
+                        </td>
+                        <td>{money(row.lineNet)}</td>
+                        <td>{money(row.reportNet)}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="row-profit">
+                    <td style={{ textAlign: "left" }}>Peyda</td>
+                    <td>{money(profitTotalTmt)}</td>
+                    <td>{money(profitTotalUsd)}</td>
+                  </tr>
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="panel income-panel" style={{ marginTop: 16 }}>
+          <div className="panel-title income-panel-title">
+            <div className="income-title-client">ALGY-BERGI</div>
+          </div>
+          <table className="income-table">
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left" }}></th>
+                <th>TMT</th>
+                <th>USD</th>
+              </tr>
+            </thead>
+            <tbody>
+              {balanceCategories.length === 0 ? (
+                <tr>
+                  <td colSpan={3} style={{ textAlign: "center", color: "#64748b" }}>
+                    No balance data
+                  </td>
                 </tr>
-                {expenseCategories.map((row, idx) => {
-                  const id = toNumber(row.id, idx + 1);
-                  const detailsQuery = buildQuery({
-                    kind: "expense",
-                    category: id,
-                    code,
-                    year,
-                    month,
-                    startDate,
-                    endDate
-                  });
-                  return (
-                    <tr key={`expense-${id}-${idx}`} className="income-category-row">
-                      <td style={{ textAlign: "left" }}>
-                        <Link href={`/${tenantId}/income-statement/details?${detailsQuery}`} className="income-category-link">
-                          <span className="dot red"></span>
-                          {row.name || "-"}
-                        </Link>
-                      </td>
-                      <td>{money(row.lineNet)}</td>
-                      <td>{money(row.reportNet)}</td>
-                    </tr>
-                  );
-                })}
-                <tr className="row-profit">
-                  <td style={{ textAlign: "left" }}>Peyda</td>
-                  <td>{money(profitTotalTmt)}</td>
-                  <td>{money(profitTotalUsd)}</td>
-                </tr>
-              </>
-            )}
-          </tbody>
-        </table>
+              ) : (
+                <>
+                  <tr className="income-main-total-row">
+                    <td style={{ textAlign: "left" }}>Total Balance</td>
+                    <td>{money(balanceTotalTmt)}</td>
+                    <td>{money(balanceTotalUsd)}</td>
+                  </tr>
+                  {balanceCategories.map((row, idx) => {
+                    const id = toNumber(row.id, idx + 1);
+                    const detailsQuery = buildQuery({
+                      kind: "balance",
+                      category: id,
+                      code,
+                      year,
+                      month,
+                      startDate,
+                      endDate
+                    });
+                    return (
+                      <tr key={`balance-${id}-${idx}`} className="income-category-row">
+                        <td style={{ textAlign: "left" }}>
+                          <Link href={`/${tenantId}/income-statement/details?${detailsQuery}`} className="income-category-link">
+                            <span className="dot yellow"></span>
+                            {row.name || "-"}
+                          </Link>
+                        </td>
+                        <td>{money(row.lineNet)}</td>
+                        <td>{money(row.reportNet)}</td>
+                      </tr>
+                    );
+                  })}
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <IncomeFiltersCard

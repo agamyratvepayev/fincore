@@ -7,9 +7,10 @@ export interface IncomeReportingProvider {
   execute(tenantId: string, from?: string, to?: string): Promise<ReportResponse>;
   revenueTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
   expenseTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
+  balanceTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
   details(
     tenantId: string,
-    kind: "revenue" | "expense",
+    kind: "revenue" | "expense" | "balance",
     from?: string,
     to?: string,
     clientCode?: string,

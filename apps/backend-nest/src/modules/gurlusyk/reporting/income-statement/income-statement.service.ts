@@ -158,9 +158,46 @@ export class IncomeStatementService {
     };
   }
 
+  async balanceTotals(
+    tenantId: string,
+    filters?: {
+      from?: string;
+      to?: string;
+      year?: number;
+      month?: number;
+      startDate?: string;
+      endDate?: string;
+      client?: string;
+    }
+  ) {
+    await ensureReportingTenantReady(tenantId);
+    const period = buildReportPeriod(filters?.from, filters?.to);
+    const rows = await this.repository.getBalanceTotals(
+      period,
+      {
+        year: filters?.year,
+        month: filters?.month,
+        startDate: filters?.startDate,
+        endDate: filters?.endDate
+      },
+      filters?.client || getDefaultClientCode(tenantId)
+    );
+
+    return {
+      tenantId,
+      report: "income-statement-balance-totals",
+      period,
+      totals: {
+        totalTmt: rows.reduce((acc, row) => acc + row.lineNet, 0),
+        totalUsd: rows.reduce((acc, row) => acc + row.reportNet, 0)
+      },
+      categories: rows
+    };
+  }
+
   async details(
     tenantId: string,
-    kind: "revenue" | "expense",
+    kind: "revenue" | "expense" | "balance",
     from?: string,
     to?: string,
     clientCode?: string,
@@ -190,11 +227,18 @@ export class IncomeStatementService {
     const rows =
       kind === "expense"
         ? await this.repository.getExpenseDetails(period, detailParams, selectedClientCode)
-        : await this.repository.getRevenueDetails(period, detailParams, selectedClientCode);
+        : kind === "balance"
+          ? await this.repository.getBalanceDetails(period, detailParams, selectedClientCode)
+          : await this.repository.getRevenueDetails(period, detailParams, selectedClientCode);
 
     return {
       tenantId,
-      report: kind === "expense" ? "income-statement-expense-details" : "income-statement-revenue-details",
+      report:
+        kind === "expense"
+          ? "income-statement-expense-details"
+          : kind === "balance"
+            ? "income-statement-balance-details"
+            : "income-statement-revenue-details",
       period,
       paging: {
         offset: offset ?? 0,

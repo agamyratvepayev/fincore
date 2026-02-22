@@ -627,6 +627,7 @@ thead th {
   background: #dbeafe;
 }
 
+
 .income-specode-table tbody tr.income-specode-total-row td {
   font-weight: 700;
   background: #e2e8f0;
@@ -642,6 +643,7 @@ thead th {
   color: #1d4ed8;
   font-weight: 700;
 }
+
 
 @media (max-width: 980px) {
   .layout-grid {

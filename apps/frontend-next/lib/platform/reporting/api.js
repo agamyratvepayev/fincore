@@ -27,8 +27,15 @@ export async function fetchIncomeExpenseTotals(tenantId, filters = {}) {
   return response.json();
 }
 
+export async function fetchIncomeBalanceTotals(tenantId, filters = {}) {
+  const url = withQuery(`/tenants/${tenantId}/reports/income-statement/balance-totals`, filters);
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Failed to load balance totals (${response.status})`);
+  return response.json();
+}
+
 export async function fetchIncomeDetails(tenantId, kind, filters = {}) {
-  const kindValue = kind === "expense" ? "expense" : "revenue";
+  const kindValue = kind === "expense" ? "expense" : kind === "balance" ? "balance" : "revenue";
   const requestFilters = { ...filters, kind: kindValue };
   const url = withQuery(`/tenants/${tenantId}/reports/income-statement/details`, requestFilters);
   const response = await fetch(url, { cache: "no-store" });
@@ -51,6 +58,10 @@ export async function fetchIncomeRevenueDetails(tenantId, filters = {}) {
 
 export async function fetchIncomeExpenseDetails(tenantId, filters = {}) {
   return fetchIncomeDetails(tenantId, "expense", filters);
+}
+
+export async function fetchIncomeBalanceDetails(tenantId, filters = {}) {
+  return fetchIncomeDetails(tenantId, "balance", filters);
 }
 
 export async function fetchIncomeDateFilters(tenantId) {

@@ -43,6 +43,10 @@ function normalizeType(row) {
   return String(row?.TYPE_ ?? row?.type_ ?? row?.TYPE ?? row?.type ?? "").trim();
 }
 
+function normalizeBalanceGroup(row) {
+  return String(row?.GROUP_ ?? row?.group_ ?? row?.GROUP ?? row?.group ?? "").trim();
+}
+
 function text(value) {
   return String(value ?? "").trim();
 }
@@ -54,7 +58,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
 
   const rawQuery = (await searchParams) ?? {};
   const defaultClientCode = "120.05.001";
-  const kind = rawQuery.kind === "expense" ? "expense" : "revenue";
+  const kind = rawQuery.kind === "expense" ? "expense" : rawQuery.kind === "balance" ? "balance" : "revenue";
   const category = rawQuery.category ? String(rawQuery.category) : "1";
   const code = rawQuery.code ? String(rawQuery.code) : defaultClientCode;
   const year = rawQuery.year ? String(rawQuery.year) : "";
@@ -66,6 +70,10 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
       ? rawQuery.type
         ? String(rawQuery.type).trim()
         : ""
+      : kind === "balance"
+        ? rawQuery.type
+          ? String(rawQuery.type).trim()
+          : ""
       : rawQuery.specode
         ? String(rawQuery.specode).trim()
         : "";
@@ -87,13 +95,14 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
 
   const allRows = Array.isArray(detailsData?.rows) ? detailsData.rows : [];
   const categoryName = String(
-    allRows[0]?.NAME ??
+    allRows[0]?.CATEGORY ??
+      allRows[0]?.NAME ??
       allRows[0]?.ADDR1 ??
       allRows[0]?.name ??
       (category === "1" ? "Edilen is F2" : category === "2" ? "Konwertasiya" : category === "3" ? "Beylekiler" : `Category ${category}`)
   ).trim();
-  const groupLabel = kind === "expense" ? "Type" : "Specode";
-  const normalizeGroup = kind === "expense" ? normalizeType : normalizeSpecode;
+  const groupLabel = kind === "expense" ? "Type" : kind === "balance" ? "Type" : "Specode";
+  const normalizeGroup = kind === "expense" ? normalizeType : kind === "balance" ? normalizeBalanceGroup : normalizeSpecode;
   const groupFilteredRows = selectedGroup
     ? allRows.filter((row) => normalizeGroup(row) === selectedGroup)
     : allRows;
@@ -112,7 +121,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
     month,
     startDate,
     endDate,
-    [kind === "expense" ? "type" : "specode"]: selectedGroup,
+    [kind === "expense" || kind === "balance" ? "type" : "specode"]: selectedGroup,
     limit,
     offset: Math.max(0, offset - limit)
   });
@@ -124,7 +133,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
     month,
     startDate,
     endDate,
-    [kind === "expense" ? "type" : "specode"]: selectedGroup,
+    [kind === "expense" || kind === "balance" ? "type" : "specode"]: selectedGroup,
     limit,
     offset: offset + limit
   });
@@ -198,7 +207,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
                           month,
                           startDate,
                           endDate,
-                          [kind === "expense" ? "type" : "specode"]:
+                          [kind === "expense" || kind === "balance" ? "type" : "specode"]:
                             item.name === `(No ${groupLabel})` ? "" : item.name,
                           limit,
                           offset: 0
@@ -220,7 +229,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
               <tr>
                 <th className="income-details-date-col" style={{ textAlign: "center" }}>Date</th>
                 <th style={{ textAlign: "center" }}>{groupLabel}</th>
-                {showNameAmountColumns ? <th style={{ textAlign: "center" }}>Name</th> : null}
+                {showNameAmountColumns ? <th style={{ textAlign: "center" }}>ITEMNAME</th> : null}
                 {showNameAmountColumns ? <th style={{ textAlign: "center" }}>Amount</th> : null}
                 <th style={{ textAlign: "center" }}>Line Exp</th>
                 <th className="income-details-money-col">TMT</th>
@@ -240,12 +249,13 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
                   const nameText = amountText
                     ? String(row.ITEMNAME ?? row.itemname ?? "")
                     : "";
+                  const groupValue = normalizeGroup(row) || "-";
                   return (
                     <tr key={`row-${idx}`}>
                       <td className="income-details-date-col" style={{ textAlign: "center" }}>
                         {isoDate(row.DATE_ ?? row.date_ ?? row.date)}
                       </td>
-                      <td style={{ textAlign: "center" }}>{normalizeGroup(row) || "-"}</td>
+                      <td style={{ textAlign: "center" }}>{groupValue}</td>
                       {showNameAmountColumns ? <td style={{ textAlign: "center" }}>{nameText}</td> : null}
                       {showNameAmountColumns ? <td style={{ textAlign: "center" }}>{amountText}</td> : null}
                       <td style={{ textAlign: "center" }}>{String(row.LINEEXP ?? row.lineexp ?? "-")}</td>
@@ -306,7 +316,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
         limit={limit}
         extraParams={{
           kind,
-          [kind === "expense" ? "type" : "specode"]: selectedGroup
+          [kind === "expense" || kind === "balance" ? "type" : "specode"]: selectedGroup
         }}
       />
     </div>

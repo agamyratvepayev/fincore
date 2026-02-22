@@ -30,6 +30,11 @@ export function queryExpenseTotals(filters: RevenueFilterParams = {}) {
   return "EXEC GURINCEXPTOT @CODE = :code, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
 }
 
+export function queryBalanceTotals(filters: RevenueFilterParams = {}) {
+  void filters;
+  return "EXEC GURINVBALTOT @CODE = :code, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
 export function queryRevenueDetails(filters: DetailParams = {}) {
   void filters;
   return "EXEC GURINCREVDET @CODE = :code, @CATEGORY = :category, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
@@ -38,4 +43,9 @@ export function queryRevenueDetails(filters: DetailParams = {}) {
 export function queryExpenseDetails(filters: DetailParams = {}) {
   void filters;
   return "EXEC GURINCEXPDET @CODE = :code, @CATEGORY = :category, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
+}
+
+export function queryBalanceDetails(filters: DetailParams = {}) {
+  void filters;
+  return "EXEC GURINVBALDET @CODE = :code, @CATEGORY = :category, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
 }
