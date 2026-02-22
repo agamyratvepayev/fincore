@@ -142,11 +142,25 @@ a {
   background: rgba(255, 255, 255, 0.7);
 }
 
+.reports-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .reports-nav {
   display: flex;
   gap: 24px;
   overflow-x: auto;
-  padding: 8px 12px;
+  padding: 8px 20px;
+  white-space: nowrap;
+}
+
+.reports-nav-right {
+  display: flex;
+  gap: 12px;
+  padding: 8px 20px;
   white-space: nowrap;
 }
 
@@ -1090,4 +1104,267 @@ thead th {
   .users-table tbody td {
     font-size: 14px;
   }
+}
+
+.todos-wrap {
+  display: grid;
+  gap: 12px;
+}
+
+.todos-head h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.todos-head p {
+  margin: 4px 0 0;
+  color: #64748b;
+}
+
+.todos-banner {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.todos-banner-ok {
+  border: 1px solid #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.todos-banner-error {
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.todos-form {
+  display: grid;
+  grid-template-columns: 1.7fr 3fr 0.65fr 2fr 0.58fr auto;
+  gap: 10px;
+  align-items: end;
+  padding: 8px;
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+  background: #fafcff;
+}
+
+.todos-form input,
+.todos-form select {
+  border: 1px solid #d0d8e2;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  height: 38px;
+  box-sizing: border-box;
+}
+
+.todos-form button {
+  border: 1px solid #1d4ed8;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 700;
+  padding: 8px 12px;
+  height: 38px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1400px) {
+  .todos-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.todos-table-wrap {
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+  overflow: auto;
+}
+
+.todos-table {
+  width: 100%;
+  min-width: 1080px;
+  border-collapse: collapse;
+}
+
+.todos-table th,
+.todos-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 9px 10px;
+  font-size: 13px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.todos-table thead th {
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 700;
+  text-align: center;
+}
+
+.todos-empty {
+  text-align: center !important;
+  color: #64748b;
+}
+
+.todos-display-cell {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.todos-row-form {
+  display: block;
+}
+
+.todos-row-grid {
+  display: grid;
+  grid-template-columns: 1.7fr 2.9fr 0.78fr 2.05fr 0.75fr 0.62fr auto;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.todos-row-grid input,
+.todos-row-grid select {
+  border: 1px solid #d0d8e2;
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 12px;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.todos-created {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #475569;
+  background: #f8fafc;
+  font-size: 12px;
+  height: 33px;
+  box-sizing: border-box;
+}
+
+.todos-deadline-input {
+  max-width: 150px;
+}
+
+.todos-created-input {
+  max-width: 140px;
+}
+
+.todos-state-input {
+  width: 104px;
+  min-width: 104px;
+  max-width: 104px;
+  min-height: 33px;
+  height: 33px;
+  padding: 0 28px 0 10px;
+  font-size: 13px;
+  line-height: 38px;
+  box-sizing: border-box;
+}
+
+.todos-row-grid .todos-state-input {
+  min-height: 33px;
+  height: 33px;
+  font-size: 13px;
+}
+
+.todos-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-right: 4px;
+}
+
+.todos-save-btn,
+.todos-delete-btn {
+  border-radius: 10px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  height: 34px;
+  box-sizing: border-box;
+}
+
+.todos-save-btn {
+  border: 1px solid #2563eb;
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.todos-remove-form {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 100%;
+  width: 100%;
+  padding-left: 8px;
+}
+
+.todos-delete-btn {
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fff;
+  color: #b91c1c;
+  background: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 100%);
+  box-shadow: 0 1px 2px rgba(185, 28, 28, 0.1);
+}
+
+.todos-table td:last-child {
+  padding-left: 4px;
+  padding-right: 8px;
+}
+
+.todo-state {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.todos-table th:nth-child(3),
+.todos-table td:nth-child(3) {
+  width: 130px;
+}
+
+.todos-table th:nth-child(5),
+.todos-table td:nth-child(5) {
+  width: 120px;
+}
+
+.todos-table th:nth-child(6),
+.todos-table td:nth-child(6) {
+  width: 110px;
+}
+
+.todo-state-pending {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.todo-state-warn {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.todo-state-ok {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.todo-state-bad {
+  background: #fff1f2;
+  color: #9f1239;
 }

@@ -13,5 +13,5 @@ export default async function TenantPage({ params }) {
     redirect(`/${tenantId}/${defaultReport.slug}`);
   }
 
-  return <p style={{ marginBottom: 0, color: "#475569" }}>No reports configured yet for this tenant.</p>;
+  redirect(`/${tenantId}/todos`);
 }
