@@ -19,7 +19,8 @@ export default function IncomeFiltersCard({
   category,
   limit,
   compact = false,
-  extraParams = {}
+  extraParams = {},
+  showClient = true
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -32,7 +33,7 @@ export default function IncomeFiltersCard({
       if (text) qs.set(key, text);
     });
 
-    if (nextValues.code) qs.set("code", nextValues.code);
+    if (showClient && nextValues.code) qs.set("code", nextValues.code);
     if (nextValues.month) qs.set("month", nextValues.month);
     if (nextValues.year) qs.set("year", nextValues.year);
     if (nextValues.startDate) qs.set("startDate", nextValues.startDate);
@@ -76,18 +77,20 @@ export default function IncomeFiltersCard({
       <div className="filter-head income-filter-head">{title}</div>
       <div className="filter-body">
         <label className="filter-label">Client</label>
-        <select value={code} onChange={onChange("code")} className="filter-control income-select-compact">
-          {clients.map((client, idx) => {
-            const clientCode = String(client.code ?? "").trim();
-            const clientName = String(client.name ?? clientCode).trim();
-            if (!clientCode) return null;
-            return (
-              <option key={`${clientCode}-${idx}`} value={clientCode}>
-                {clientName}
-              </option>
-            );
-          })}
-        </select>
+        {showClient ? (
+          <select value={code} onChange={onChange("code")} className="filter-control income-select-compact">
+            {clients.map((client, idx) => {
+              const clientCode = String(client.code ?? "").trim();
+              const clientName = String(client.name ?? clientCode).trim();
+              if (!clientCode) return null;
+              return (
+                <option key={`${clientCode}-${idx}`} value={clientCode}>
+                  {clientName}
+                </option>
+              );
+            })}
+          </select>
+        ) : null}
 
         <div className="filter-grid-two">
           <div>

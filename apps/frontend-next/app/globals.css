@@ -441,6 +441,87 @@ thead th {
   margin-right: 10px;
 }
 
+.balance-totals-table {
+  border: 1px solid #c9d3e6;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.balance-totals-table thead th {
+  background: transparent;
+  color: #334155;
+  letter-spacing: 0.01em;
+}
+
+.balance-category-row td {
+  font-weight: 800;
+  color: #1e293b;
+  font-size: 14px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  background: transparent !important;
+}
+
+.balance-group-row td {
+  font-weight: 800;
+  color: #334155;
+  font-size: 13px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background: transparent !important;
+}
+
+.balance-name-row td {
+  font-size: 12px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  background: transparent !important;
+}
+
+.balance-totals-table .income-main-total-row,
+.balance-totals-table .row-expense,
+.balance-totals-table .income-category-row {
+  background: transparent !important;
+}
+
+.balance-level-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.balance-level-category,
+.balance-level-group {
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+
+.balance-level-name {
+  padding-left: 56px;
+  font-weight: 650;
+}
+
+.balance-level-group {
+  padding-left: 28px;
+}
+
+.balance-level-indicator {
+  width: 14px;
+  display: inline-flex;
+  justify-content: center;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.balance-level-name .balance-level-indicator {
+  display: none;
+}
+
+.balance-level-category {
+  font-size: 1.02em;
+}
+
 .income-filter-card {
   border-radius: 16px;
   border-color: #cfd8e5;

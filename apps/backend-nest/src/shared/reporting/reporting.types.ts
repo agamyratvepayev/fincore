@@ -9,6 +9,7 @@ export type ReportLine = {
   amount: number;
   lineNet?: number;
   reportNet?: number;
+  group?: string;
 };
 
 export type ReportResponse = {

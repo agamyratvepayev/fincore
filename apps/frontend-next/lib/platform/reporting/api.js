@@ -77,3 +77,24 @@ export async function fetchIncomeClients(tenantId) {
   if (!response.ok) throw new Error(`Failed to load clients (${response.status})`);
   return response.json();
 }
+
+export async function fetchBalanceTotals(tenantId, filters = {}) {
+  const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet`, filters);
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Failed to load balance totals (${response.status})`);
+  return response.json();
+}
+
+export async function fetchBalanceDetails(tenantId, filters = {}) {
+  const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/details`, filters);
+  const response = await fetch(url, { cache: "no-store" });
+  if (response.ok) return response.json();
+
+  const retryFilters = { ...filters };
+  delete retryFilters.offset;
+  delete retryFilters.limit;
+  const retryUrl = withQuery(`/tenants/${tenantId}/reports/balance-sheet/details`, retryFilters);
+  const retryResponse = await fetch(retryUrl, { cache: "no-store" });
+  if (!retryResponse.ok) throw new Error(`Failed to load balance details (${retryResponse.status})`);
+  return retryResponse.json();
+}
