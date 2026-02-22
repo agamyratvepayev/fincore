@@ -3,6 +3,7 @@ import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { resolveTenant } from "../../../lib/platform/tenant/resolve-tenant";
 import {
+  fetchBalanceBioTotals,
   fetchBalanceCreditTotals,
   fetchBalanceMaterialTotals,
   fetchBalanceTotals,
@@ -38,10 +39,11 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
   const expandCash = rawQuery.expandCash === "1";
   const expandMaterial = rawQuery.expandMaterial === "1";
   const expandCredit = rawQuery.expandCredit === "1";
+  const expandBio = rawQuery.expandBio === "1";
   const selectedGroup = rawQuery.group ? String(rawQuery.group) : "";
   const selectedCreditGroup = rawQuery.creditGroup ? String(rawQuery.creditGroup) : "";
 
-  const [dateFilterData, totalsData, materialTotalsData, creditTotalsData] = await Promise.all([
+  const [dateFilterData, totalsData, materialTotalsData, creditTotalsData, bioTotalsData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
     fetchBalanceTotals(tenantId, {
       year: year || undefined,
@@ -56,6 +58,12 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
       endDate: endDate || undefined
     }),
     fetchBalanceCreditTotals(tenantId, {
+      year: year || undefined,
+      month: month || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined
+    }),
+    fetchBalanceBioTotals(tenantId, {
       year: year || undefined,
       month: month || undefined,
       startDate: startDate || undefined,
@@ -94,10 +102,13 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
     creditGroupMap.set(group, current);
   });
   const creditGroups = Array.from(creditGroupMap.entries()).map(([name, value]) => ({ name, ...value }));
+  const bioRows = Array.isArray(bioTotalsData?.categories) ? bioTotalsData.categories : [];
+  const bioTotalTmt = Number(bioTotalsData?.totals?.totalTmt ?? 0);
+  const bioTotalUsd = Number(bioTotalsData?.totals?.totalUsd ?? 0);
 
   const years = Array.isArray(dateFilterData?.years) ? dateFilterData.years : [];
   const months = Array.isArray(dateFilterData?.months) ? dateFilterData.months : [];
-  const hasAnyRows = rows.length > 0 || materialRows.length > 0 || creditRows.length > 0;
+  const hasAnyRows = rows.length > 0 || materialRows.length > 0 || creditRows.length > 0 || bioRows.length > 0;
 
   return (
     <div className="layout-grid income-layout-grid income-totals-layout">
@@ -130,6 +141,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                           expandCash: expandCash ? "" : "1",
                           expandMaterial: expandMaterial ? "1" : "",
                           expandCredit: expandCredit ? "1" : "",
+                          expandBio: expandBio ? "1" : "",
                           creditGroup: selectedCreditGroup || "",
                           year,
                           month,
@@ -156,6 +168,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                                   expandCash: "1",
                                   expandMaterial: expandMaterial ? "1" : "",
                                   expandCredit: expandCredit ? "1" : "",
+                                  expandBio: expandBio ? "1" : "",
                                   creditGroup: selectedCreditGroup || "",
                                   group: selectedGroup === group.name ? "" : group.name,
                                   year,
@@ -204,6 +217,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                           group: selectedGroup || "",
                           expandMaterial: expandMaterial ? "" : "1",
                           expandCredit: expandCredit ? "1" : "",
+                          expandBio: expandBio ? "1" : "",
                           creditGroup: selectedCreditGroup || "",
                           year,
                           month,
@@ -213,12 +227,12 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                         className="income-category-link balance-level-link balance-level-category"
                       >
                         <span className="balance-level-indicator">{expandMaterial ? "▾" : "▸"}</span>
-                        MATERIALLAR
-                      </Link>
-                    </td>
-                    <td>{money(materialTotalTmt)}</td>
-                    <td>{money(materialTotalUsd)}</td>
-                  </tr>
+                      MATERIALLAR
+                    </Link>
+                  </td>
+                  <td>{money(materialTotalTmt)}</td>
+                  <td>{money(materialTotalUsd)}</td>
+                </tr>
 
                   {expandMaterial
                     ? materialRows.map((row, idx) => (
@@ -251,7 +265,57 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                           expandCash: expandCash ? "1" : "",
                           group: selectedGroup || "",
                           expandMaterial: expandMaterial ? "1" : "",
+                          expandCredit: expandCredit ? "1" : "",
+                          expandBio: expandBio ? "" : "1",
+                          creditGroup: selectedCreditGroup || "",
+                          year,
+                          month,
+                          startDate,
+                          endDate
+                        })}`}
+                        className="income-category-link balance-level-link balance-level-category"
+                      >
+                        <span className="balance-level-indicator">{expandBio ? "▾" : "▸"}</span>
+                        BIO AKTIWLER
+                      </Link>
+                    </td>
+                    <td>{money(bioTotalTmt)}</td>
+                    <td>{money(bioTotalUsd)}</td>
+                  </tr>
+
+                  {expandBio
+                    ? bioRows.map((row, idx) => (
+                        <tr key={`bio-${idx}`} className="income-category-row balance-name-row">
+                          <td style={{ textAlign: "left" }}>
+                            <Link
+                              href={`/${tenantId}/balance-sheet/details?${buildQuery({
+                                kind: "bio",
+                                category: String(row.code ?? idx + 1),
+                                year,
+                                month,
+                                startDate,
+                                endDate
+                              })}`}
+                              className="income-category-link balance-level-link balance-level-name"
+                            >
+                              {String(row.label ?? "-")}
+                            </Link>
+                          </td>
+                          <td>{money(row.lineNet ?? row.amount)}</td>
+                          <td>{money(row.reportNet)}</td>
+                        </tr>
+                      ))
+                    : null}
+
+                  <tr className="income-main-total-row balance-category-row">
+                    <td style={{ textAlign: "left" }}>
+                      <Link
+                        href={`/${tenantId}/balance-sheet?${buildQuery({
+                          expandCash: expandCash ? "1" : "",
+                          group: selectedGroup || "",
+                          expandMaterial: expandMaterial ? "1" : "",
                           expandCredit: expandCredit ? "" : "1",
+                          expandBio: expandBio ? "1" : "",
                           creditGroup: selectedCreditGroup || "",
                           year,
                           month,
@@ -279,6 +343,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                                   group: selectedGroup || "",
                                   expandMaterial: expandMaterial ? "1" : "",
                                   expandCredit: "1",
+                                  expandBio: expandBio ? "1" : "",
                                   creditGroup: selectedCreditGroup === group.name ? "" : group.name,
                                   year,
                                   month,

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { resolveTenant } from "../../../../lib/platform/tenant/resolve-tenant";
 import {
+  fetchBalanceBioTotals,
   fetchBalanceCreditTotals,
   fetchBalanceDetails,
   fetchBalanceMaterialTotals,
@@ -42,12 +43,14 @@ function normalizeType(row) {
 }
 
 function detailTmtValue(row, kind) {
-  if (kind === "material") return Number(row.OUTCOST ?? row.outcost ?? 0);
+  if (kind === "material" || kind === "bio") return Number(row.OUTCOST ?? row.outcost ?? 0);
   return Number(row.AMOUNT ?? row.amount ?? row.OUTCOST ?? row.outcost ?? 0);
 }
 
 function detailUsdValue(row, kind) {
-  if (kind === "material") return Number(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0);
+  if (kind === "material" || kind === "bio") {
+    return Number(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0);
+  }
   return Number(row.REPORTNET ?? row.reportnet ?? row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0);
 }
 
@@ -57,8 +60,9 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   if (!tenant) notFound();
 
   const rawQuery = (await searchParams) ?? {};
-  const kind = rawQuery.kind === "material" ? "material" : rawQuery.kind === "credit" ? "credit" : "cash";
-  const showAmountColumn = kind === "material";
+  const kind =
+    rawQuery.kind === "material" ? "material" : rawQuery.kind === "credit" ? "credit" : rawQuery.kind === "bio" ? "bio" : "cash";
+  const showAmountColumn = kind === "material" || kind === "bio";
   const category = rawQuery.category ? String(rawQuery.category) : "1";
   const year = rawQuery.year ? String(rawQuery.year) : "";
   const month = rawQuery.month ? String(rawQuery.month) : "";
@@ -68,7 +72,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const limit = Math.max(1, toNumber(rawQuery.limit, 50));
   const offset = Math.max(0, toNumber(rawQuery.offset, 0));
 
-  const [dateFilterData, detailsData, totalsData, materialTotalsData, creditTotalsData] = await Promise.all([
+  const [dateFilterData, detailsData, totalsData, materialTotalsData, creditTotalsData, bioTotalsData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
     fetchBalanceDetails(tenantId, {
       kind,
@@ -95,6 +99,12 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
       month: month || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined
+    }).catch(() => ({ categories: [] })),
+    fetchBalanceBioTotals(tenantId, {
+      year: year || undefined,
+      month: month || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined
     }).catch(() => ({ categories: [] }))
   ]);
 
@@ -107,7 +117,8 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const totalsRows = Array.isArray(totalsData?.lines) ? totalsData.lines : [];
   const materialRows = Array.isArray(materialTotalsData?.categories) ? materialTotalsData.categories : [];
   const creditRows = Array.isArray(creditTotalsData?.categories) ? creditTotalsData.categories : [];
-  const sourceRows = kind === "material" ? materialRows : kind === "credit" ? creditRows : totalsRows;
+  const bioRows = Array.isArray(bioTotalsData?.categories) ? bioTotalsData.categories : [];
+  const sourceRows = kind === "material" ? materialRows : kind === "credit" ? creditRows : kind === "bio" ? bioRows : totalsRows;
   const categoryName = String(
     sourceRows.find((row) => String(row.code ?? "") === String(category))?.label ??
       allRows[0]?.DEFINITION_ ??
@@ -228,7 +239,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
             <thead>
               <tr>
                 <th className="income-details-date-col" style={{ textAlign: "center" }}>Date</th>
-                <th style={{ textAlign: "center" }}>{kind === "material" ? "Item" : "Type"}</th>
+                <th style={{ textAlign: "center" }}>{kind === "material" || kind === "bio" ? "Item" : "Type"}</th>
                 <th style={{ textAlign: "center" }}>{kind === "credit" ? "Whouse" : "Client"}</th>
                 {showAmountColumn ? <th style={{ textAlign: "center" }}>Amount</th> : null}
                 <th style={{ textAlign: "center" }}>Line Exp</th>

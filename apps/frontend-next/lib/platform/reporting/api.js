@@ -112,3 +112,10 @@ export async function fetchBalanceCreditTotals(tenantId, filters = {}) {
   if (!response.ok) throw new Error(`Failed to load balance credit totals (${response.status})`);
   return response.json();
 }
+
+export async function fetchBalanceBioTotals(tenantId, filters = {}) {
+  const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/bio-totals`, filters);
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Failed to load balance bio totals (${response.status})`);
+  return response.json();
+}

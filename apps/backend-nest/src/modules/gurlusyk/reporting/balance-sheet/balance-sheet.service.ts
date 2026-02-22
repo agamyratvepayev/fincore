@@ -53,7 +53,7 @@ export class BalanceSheetService {
       category?: string;
       offset?: number;
       limit?: number;
-      kind?: "cash" | "material" | "credit";
+      kind?: "cash" | "material" | "credit" | "bio";
     }
   ) {
     await ensureReportingTenantReady(tenantId);
@@ -130,6 +130,39 @@ export class BalanceSheetService {
     return {
       tenantId,
       report: "balance-sheet-credit-totals",
+      period,
+      totals: {
+        totalTmt: rows.reduce((acc, row) => acc + Number(row.lineNet ?? row.amount ?? 0), 0),
+        totalUsd: rows.reduce((acc, row) => acc + Number(row.reportNet ?? 0), 0)
+      },
+      categories: rows
+    };
+  }
+
+  async bioTotals(
+    tenantId: string,
+    filters?: {
+      from?: string;
+      to?: string;
+      year?: number;
+      month?: number;
+      startDate?: string;
+      endDate?: string;
+      client?: string;
+    }
+  ) {
+    await ensureReportingTenantReady(tenantId);
+    const period = buildReportPeriod(filters?.from, filters?.to);
+    const rows = await this.repository.getBioLines(period, {
+      year: filters?.year,
+      month: filters?.month,
+      startDate: filters?.startDate,
+      endDate: filters?.endDate
+    });
+
+    return {
+      tenantId,
+      report: "balance-sheet-bio-totals",
       period,
       totals: {
         totalTmt: rows.reduce((acc, row) => acc + Number(row.lineNet ?? row.amount ?? 0), 0),

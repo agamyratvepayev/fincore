@@ -1,6 +1,8 @@
 import { executeNamedQuery } from "@fincore/db-mssql/src/query.js";
 import type { ReportLine, ReportPeriod } from "../../../../shared/reporting/reporting.types.js";
 import {
+  queryBioDetails,
+  queryBioTotals,
   queryCashDetails,
   queryCashTotals,
   queryCreditDetails,
@@ -89,6 +91,20 @@ export class BalanceSheetRepository {
     return executeNamedQuery<Record<string, unknown>>(queryCreditDetails(params), params);
   }
 
+  async fetchBioTotals(overrides?: DateParams) {
+    const params = this.dateParams(overrides);
+    return executeNamedQuery<Record<string, unknown>>(queryBioTotals(params), params);
+  }
+
+  async fetchBioDetails(code: string, overrides?: DateParams, page?: { offset?: number; limit?: number }) {
+    const params = {
+      code: String(code ?? "").trim(),
+      ...this.pageParams(page),
+      ...this.dateParams(overrides)
+    };
+    return executeNamedQuery<Record<string, unknown>>(queryBioDetails(params), params);
+  }
+
   async getLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
     void period;
     const rows = await this.fetchCashTotals(overrides);
@@ -108,7 +124,7 @@ export class BalanceSheetRepository {
       category?: string;
       offset?: number;
       limit?: number;
-      kind?: "cash" | "material" | "credit";
+      kind?: "cash" | "material" | "credit" | "bio";
     }
   ) {
     void period;
@@ -120,6 +136,12 @@ export class BalanceSheetRepository {
     }
     if (filters.kind === "credit") {
       return this.fetchCreditDetails(filters.category ?? "", filters, {
+        offset: filters.offset ?? 0,
+        limit: filters.limit ?? 100
+      });
+    }
+    if (filters.kind === "bio") {
+      return this.fetchBioDetails(filters.category ?? "", filters, {
         offset: filters.offset ?? 0,
         limit: filters.limit ?? 100
       });
@@ -168,5 +190,19 @@ export class BalanceSheetRepository {
       reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0),
       group: String(row.GROUP_ ?? row.group_ ?? "BEYLEKILER")
     }));
+  }
+
+  async getBioLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
+    void period;
+    const rows = await this.fetchBioTotals(overrides);
+    return rows
+      .map((row, index) => ({
+        code: String(row.CODE ?? row.code ?? `BIO_${index + 1}`),
+        label: String(row.NAME ?? row.name ?? `Bioactive ${index + 1}`),
+        amount: Number(row.AMOUNT ?? row.amount ?? 0),
+        lineNet: Number(row.OUTCOST ?? row.outcost ?? 0),
+        reportNet: Number(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0)
+      }))
+      .filter((row) => Math.abs(Number(row.amount ?? 0)) > 0.000001);
   }
 }
