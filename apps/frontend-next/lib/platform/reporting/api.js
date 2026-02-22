@@ -113,6 +113,13 @@ export async function fetchBalanceCreditTotals(tenantId, filters = {}) {
   return response.json();
 }
 
+export async function fetchBalanceDebitTotals(tenantId, filters = {}) {
+  const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/debit-totals`, filters);
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Failed to load balance debit totals (${response.status})`);
+  return response.json();
+}
+
 export async function fetchBalanceBioTotals(tenantId, filters = {}) {
   const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/bio-totals`, filters);
   const response = await fetch(url, { cache: "no-store" });

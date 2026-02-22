@@ -6,6 +6,7 @@ import {
   fetchBalanceAdvanceTotals,
   fetchBalanceBioTotals,
   fetchBalanceCreditTotals,
+  fetchBalanceDebitTotals,
   fetchBalanceIntangibleTotals,
   fetchBalanceLoanTotals,
   fetchBalanceMaterialTotals,
@@ -43,6 +44,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
   const expandCash = rawQuery.expandCash === "1";
   const expandMaterial = rawQuery.expandMaterial === "1";
   const expandCredit = rawQuery.expandCredit === "1";
+  const expandDebit = rawQuery.expandDebit === "1";
   const expandBio = rawQuery.expandBio === "1";
   const expandLoan = rawQuery.expandLoan === "1";
   const expandAdvance = rawQuery.expandAdvance === "1";
@@ -50,9 +52,10 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
   const expandShare = rawQuery.expandShare === "1";
   const selectedGroup = rawQuery.group ? String(rawQuery.group) : "";
   const selectedCreditGroup = rawQuery.creditGroup ? String(rawQuery.creditGroup) : "";
+  const selectedDebitGroup = rawQuery.debitGroup ? String(rawQuery.debitGroup) : "";
   const selectedShareGroup = rawQuery.shareGroup ? String(rawQuery.shareGroup) : "";
 
-  const [dateFilterData, totalsData, materialTotalsData, creditTotalsData, bioTotalsData, loanTotalsData, advanceTotalsData, intangibleTotalsData, shareTotalsData] = await Promise.all([
+  const [dateFilterData, totalsData, materialTotalsData, creditTotalsData, debitTotalsData, bioTotalsData, loanTotalsData, advanceTotalsData, intangibleTotalsData, shareTotalsData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
     fetchBalanceTotals(tenantId, {
       year: year || undefined,
@@ -67,6 +70,12 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
       endDate: endDate || undefined
     }),
     fetchBalanceCreditTotals(tenantId, {
+      year: year || undefined,
+      month: month || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined
+    }),
+    fetchBalanceDebitTotals(tenantId, {
       year: year || undefined,
       month: month || undefined,
       startDate: startDate || undefined,
@@ -135,6 +144,19 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
     creditGroupMap.set(group, current);
   });
   const creditGroups = Array.from(creditGroupMap.entries()).map(([name, value]) => ({ name, ...value }));
+  const debitRows = Array.isArray(debitTotalsData?.categories) ? debitTotalsData.categories : [];
+  const debitTotalTmt = Number(debitTotalsData?.totals?.totalTmt ?? 0);
+  const debitTotalUsd = Number(debitTotalsData?.totals?.totalUsd ?? 0);
+  const debitGroupMap = new Map();
+  debitRows.forEach((row) => {
+    const group = String(row.group ?? "").trim() || "BEYLEKILER";
+    const current = debitGroupMap.get(group) ?? { lineNet: 0, reportNet: 0, rows: [] };
+    current.lineNet += Number(row.lineNet ?? row.amount ?? 0);
+    current.reportNet += Number(row.reportNet ?? 0);
+    current.rows.push(row);
+    debitGroupMap.set(group, current);
+  });
+  const debitGroups = Array.from(debitGroupMap.entries()).map(([name, value]) => ({ name, ...value }));
   const bioRows = Array.isArray(bioTotalsData?.categories) ? bioTotalsData.categories : [];
   const bioTotalTmt = Number(bioTotalsData?.totals?.totalTmt ?? 0);
   const bioTotalUsd = Number(bioTotalsData?.totals?.totalUsd ?? 0);
@@ -167,6 +189,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
     rows.length > 0 ||
     materialRows.length > 0 ||
     creditRows.length > 0 ||
+    debitRows.length > 0 ||
     bioRows.length > 0 ||
     loanRows.length > 0 ||
     advanceRows.length > 0 ||
@@ -204,12 +227,14 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                           expandCash: expandCash ? "" : "1",
                           expandMaterial: expandMaterial ? "1" : "",
                           expandCredit: expandCredit ? "1" : "",
+                          expandDebit: expandDebit ? "1" : "",
                           expandBio: expandBio ? "1" : "",
                           expandLoan: expandLoan ? "1" : "",
                           expandAdvance: expandAdvance ? "1" : "",
                           expandIntangible: expandIntangible ? "1" : "",
                           expandShare: expandShare ? "1" : "",
                           creditGroup: selectedCreditGroup || "",
+                          debitGroup: selectedDebitGroup || "",
                           shareGroup: selectedShareGroup || "",
                           year,
                           month,
@@ -236,12 +261,14 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                                   expandCash: "1",
                                   expandMaterial: expandMaterial ? "1" : "",
                                   expandCredit: expandCredit ? "1" : "",
+                          expandDebit: expandDebit ? "1" : "",
                                   expandBio: expandBio ? "1" : "",
                                   expandLoan: expandLoan ? "1" : "",
                                   expandAdvance: expandAdvance ? "1" : "",
                           expandIntangible: expandIntangible ? "1" : "",
                           expandShare: expandShare ? "1" : "",
                                   creditGroup: selectedCreditGroup || "",
+                          debitGroup: selectedDebitGroup || "",
                           shareGroup: selectedShareGroup || "",
                                   group: selectedGroup === group.name ? "" : group.name,
                                   year,
@@ -290,12 +317,14 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                           group: selectedGroup || "",
                           expandMaterial: expandMaterial ? "" : "1",
                           expandCredit: expandCredit ? "1" : "",
+                          expandDebit: expandDebit ? "1" : "",
                           expandBio: expandBio ? "1" : "",
                           expandLoan: expandLoan ? "1" : "",
                           expandAdvance: expandAdvance ? "1" : "",
                           expandIntangible: expandIntangible ? "1" : "",
                           expandShare: expandShare ? "1" : "",
                           creditGroup: selectedCreditGroup || "",
+                          debitGroup: selectedDebitGroup || "",
                           shareGroup: selectedShareGroup || "",
                           year,
                           month,
@@ -344,12 +373,14 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                           group: selectedGroup || "",
                           expandMaterial: expandMaterial ? "1" : "",
                           expandCredit: expandCredit ? "1" : "",
+                          expandDebit: expandDebit ? "1" : "",
                           expandBio: expandBio ? "" : "1",
                           expandLoan: expandLoan ? "1" : "",
                           expandAdvance: expandAdvance ? "1" : "",
                           expandIntangible: expandIntangible ? "1" : "",
                           expandShare: expandShare ? "1" : "",
                           creditGroup: selectedCreditGroup || "",
+                          debitGroup: selectedDebitGroup || "",
                           shareGroup: selectedShareGroup || "",
                           year,
                           month,
@@ -398,12 +429,14 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                           group: selectedGroup || "",
                           expandMaterial: expandMaterial ? "1" : "",
                           expandCredit: expandCredit ? "1" : "",
+                          expandDebit: expandDebit ? "1" : "",
                           expandBio: expandBio ? "1" : "",
                           expandLoan: expandLoan ? "" : "1",
                           expandAdvance: expandAdvance ? "1" : "",
                           expandIntangible: expandIntangible ? "1" : "",
                           expandShare: expandShare ? "1" : "",
                           creditGroup: selectedCreditGroup || "",
+                          debitGroup: selectedDebitGroup || "",
                           shareGroup: selectedShareGroup || "",
                           year,
                           month,
@@ -452,12 +485,14 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                           group: selectedGroup || "",
                           expandMaterial: expandMaterial ? "1" : "",
                           expandCredit: expandCredit ? "1" : "",
+                          expandDebit: expandDebit ? "1" : "",
                           expandBio: expandBio ? "1" : "",
                           expandLoan: expandLoan ? "1" : "",
                           expandAdvance: expandAdvance ? "" : "1",
                           expandIntangible: expandIntangible ? "1" : "",
                           expandShare: expandShare ? "1" : "",
                           creditGroup: selectedCreditGroup || "",
+                          debitGroup: selectedDebitGroup || "",
                           shareGroup: selectedShareGroup || "",
                           year,
                           month,
@@ -506,12 +541,14 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                           group: selectedGroup || "",
                           expandMaterial: expandMaterial ? "1" : "",
                           expandCredit: expandCredit ? "1" : "",
+                          expandDebit: expandDebit ? "1" : "",
                           expandBio: expandBio ? "1" : "",
                           expandLoan: expandLoan ? "1" : "",
                           expandAdvance: expandAdvance ? "1" : "",
                           expandIntangible: expandIntangible ? "" : "1",
                           expandShare: expandShare ? "1" : "",
                           creditGroup: selectedCreditGroup || "",
+                          debitGroup: selectedDebitGroup || "",
                           shareGroup: selectedShareGroup || "",
                           year,
                           month,
@@ -560,12 +597,14 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                           group: selectedGroup || "",
                           expandMaterial: expandMaterial ? "1" : "",
                           expandCredit: expandCredit ? "" : "1",
+                          expandDebit: expandDebit ? "1" : "",
                           expandBio: expandBio ? "1" : "",
                           expandLoan: expandLoan ? "1" : "",
                           expandAdvance: expandAdvance ? "1" : "",
                           expandIntangible: expandIntangible ? "1" : "",
                           expandShare: expandShare ? "1" : "",
                           creditGroup: selectedCreditGroup || "",
+                          debitGroup: selectedDebitGroup || "",
                           shareGroup: selectedShareGroup || "",
                           year,
                           month,
@@ -593,12 +632,14 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                                   group: selectedGroup || "",
                                   expandMaterial: expandMaterial ? "1" : "",
                                   expandCredit: "1",
+                                  expandDebit: expandDebit ? "1" : "",
                                   expandBio: expandBio ? "1" : "",
                                   expandLoan: expandLoan ? "1" : "",
                                   expandAdvance: expandAdvance ? "1" : "",
                           expandIntangible: expandIntangible ? "1" : "",
                           expandShare: expandShare ? "1" : "",
                                   creditGroup: selectedCreditGroup === group.name ? "" : group.name,
+                                  debitGroup: selectedDebitGroup || "",
                                   shareGroup: selectedShareGroup || "",
                                   year,
                                   month,
@@ -649,12 +690,107 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                           group: selectedGroup || "",
                           expandMaterial: expandMaterial ? "1" : "",
                           expandCredit: expandCredit ? "1" : "",
+                          expandDebit: expandDebit ? "" : "1",
+                          expandBio: expandBio ? "1" : "",
+                          expandLoan: expandLoan ? "1" : "",
+                          expandAdvance: expandAdvance ? "1" : "",
+                          expandIntangible: expandIntangible ? "1" : "",
+                          expandShare: expandShare ? "1" : "",
+                          creditGroup: selectedCreditGroup || "",
+                          debitGroup: selectedDebitGroup || "",
+                          shareGroup: selectedShareGroup || "",
+                          year,
+                          month,
+                          startDate,
+                          endDate
+                        })}`}
+                        className="income-category-link balance-level-link balance-level-category"
+                      >
+                        <span className="balance-level-indicator">{expandDebit ? "▾" : "▸"}</span>
+                        BERGILERIMIZ
+                      </Link>
+                    </td>
+                    <td>{money(debitTotalTmt)}</td>
+                    <td>{money(debitTotalUsd)}</td>
+                  </tr>
+
+                  {expandDebit
+                    ? debitGroups.map((group) => (
+                        <Fragment key={`debit-group-wrap-${group.name}`}>
+                          <tr key={`debit-group-${group.name}`} className="row-expense balance-group-row">
+                            <td style={{ textAlign: "left" }}>
+                              <Link
+                                href={`/${tenantId}/balance-sheet?${buildQuery({
+                                  expandCash: expandCash ? "1" : "",
+                                  group: selectedGroup || "",
+                                  expandMaterial: expandMaterial ? "1" : "",
+                                  expandCredit: expandCredit ? "1" : "",
+                                  expandDebit: "1",
+                                  expandBio: expandBio ? "1" : "",
+                                  expandLoan: expandLoan ? "1" : "",
+                                  expandAdvance: expandAdvance ? "1" : "",
+                                  expandIntangible: expandIntangible ? "1" : "",
+                                  expandShare: expandShare ? "1" : "",
+                                  creditGroup: selectedCreditGroup || "",
+                                  debitGroup: selectedDebitGroup === group.name ? "" : group.name,
+                                  shareGroup: selectedShareGroup || "",
+                                  year,
+                                  month,
+                                  startDate,
+                                  endDate
+                                })}`}
+                                className="income-category-link balance-level-link balance-level-group"
+                              >
+                                <span className="balance-level-indicator">{selectedDebitGroup === group.name ? "▾" : "▸"}</span>
+                                {group.name}
+                              </Link>
+                            </td>
+                            <td>{money(group.lineNet)}</td>
+                            <td>{money(group.reportNet)}</td>
+                          </tr>
+                          {selectedDebitGroup === group.name
+                            ? group.rows.map((row, idx) => (
+                                <tr key={`debit-name-${group.name}-${idx}`} className="income-category-row balance-name-row">
+                                  <td style={{ textAlign: "left" }}>
+                                    <Link
+                                      href={`/${tenantId}/balance-sheet/details?${buildQuery({
+                                        kind: "debit",
+                                        category: String(row.code ?? ""),
+                                        year,
+                                        month,
+                                        startDate,
+                                        endDate
+                                      })}`}
+                                      className="income-category-link balance-level-link balance-level-name"
+                                    >
+                                      {String(row.label ?? "-")}
+                                    </Link>
+                                  </td>
+                                  <td>{money(row.lineNet ?? row.amount)}</td>
+                                  <td>{money(row.reportNet)}</td>
+                                </tr>
+                              ))
+                            : null}
+                        </Fragment>
+                      ))
+                    : null}
+
+                  <tr className="income-main-total-row balance-category-row">
+                    <td style={{ textAlign: "left" }}>
+                      <Link
+                        href={`/${tenantId}/balance-sheet?${buildQuery({
+                          expandCash: expandCash ? "1" : "",
+                          group: selectedGroup || "",
+                          expandMaterial: expandMaterial ? "1" : "",
+                          expandCredit: expandCredit ? "1" : "",
+                          expandDebit: expandDebit ? "1" : "",
                           expandBio: expandBio ? "1" : "",
                           expandLoan: expandLoan ? "1" : "",
                           expandAdvance: expandAdvance ? "1" : "",
                           expandIntangible: expandIntangible ? "1" : "",
                           expandShare: expandShare ? "" : "1",
                           creditGroup: selectedCreditGroup || "",
+                          debitGroup: selectedDebitGroup || "",
                           shareGroup: selectedShareGroup || "",
                           year,
                           month,
@@ -664,7 +800,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                         className="income-category-link balance-level-link balance-level-category"
                       >
                         <span className="balance-level-indicator">{expandShare ? "▾" : "▸"}</span>
-                        PAYNAMALAR
+                        HISSE SENEDI
                       </Link>
                     </td>
                     <td>{money(shareTotalTmt)}</td>
@@ -682,12 +818,14 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                                   group: selectedGroup || "",
                                   expandMaterial: expandMaterial ? "1" : "",
                                   expandCredit: expandCredit ? "1" : "",
+                          expandDebit: expandDebit ? "1" : "",
                                   expandBio: expandBio ? "1" : "",
                                   expandLoan: expandLoan ? "1" : "",
                                   expandAdvance: expandAdvance ? "1" : "",
                                   expandIntangible: expandIntangible ? "1" : "",
                                   expandShare: "1",
                                   creditGroup: selectedCreditGroup || "",
+                          debitGroup: selectedDebitGroup || "",
                                   shareGroup: selectedShareGroup === group.name ? "" : group.name,
                                   year,
                                   month,

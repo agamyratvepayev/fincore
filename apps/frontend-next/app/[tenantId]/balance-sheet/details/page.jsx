@@ -5,6 +5,7 @@ import {
   fetchBalanceAdvanceTotals,
   fetchBalanceBioTotals,
   fetchBalanceCreditTotals,
+  fetchBalanceDebitTotals,
   fetchBalanceDetails,
   fetchBalanceIntangibleTotals,
   fetchBalanceLoanTotals,
@@ -69,6 +70,8 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
       ? "material"
       : rawQuery.kind === "credit"
         ? "credit"
+        : rawQuery.kind === "debit"
+          ? "debit"
         : rawQuery.kind === "bio"
           ? "bio"
           : rawQuery.kind === "loan"
@@ -90,7 +93,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const limit = Math.max(1, toNumber(rawQuery.limit, 50));
   const offset = Math.max(0, toNumber(rawQuery.offset, 0));
 
-  const [dateFilterData, detailsData, totalsData, materialTotalsData, creditTotalsData, bioTotalsData, loanTotalsData, advanceTotalsData, intangibleTotalsData, shareTotalsData] = await Promise.all([
+  const [dateFilterData, detailsData, totalsData, materialTotalsData, creditTotalsData, debitTotalsData, bioTotalsData, loanTotalsData, advanceTotalsData, intangibleTotalsData, shareTotalsData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
     fetchBalanceDetails(tenantId, {
       kind,
@@ -113,6 +116,12 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
       endDate: endDate || undefined
     }).catch(() => ({ categories: [] })),
     fetchBalanceCreditTotals(tenantId, {
+      year: year || undefined,
+      month: month || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined
+    }).catch(() => ({ categories: [] })),
+    fetchBalanceDebitTotals(tenantId, {
       year: year || undefined,
       month: month || undefined,
       startDate: startDate || undefined,
@@ -159,6 +168,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const totalsRows = Array.isArray(totalsData?.lines) ? totalsData.lines : [];
   const materialRows = Array.isArray(materialTotalsData?.categories) ? materialTotalsData.categories : [];
   const creditRows = Array.isArray(creditTotalsData?.categories) ? creditTotalsData.categories : [];
+  const debitRows = Array.isArray(debitTotalsData?.categories) ? debitTotalsData.categories : [];
   const bioRows = Array.isArray(bioTotalsData?.categories) ? bioTotalsData.categories : [];
   const loanRows = Array.isArray(loanTotalsData?.categories) ? loanTotalsData.categories : [];
   const advanceRows = Array.isArray(advanceTotalsData?.categories) ? advanceTotalsData.categories : [];
@@ -169,6 +179,8 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
       ? materialRows
       : kind === "credit"
         ? creditRows
+        : kind === "debit"
+          ? debitRows
         : kind === "bio"
           ? bioRows
           : kind === "loan"

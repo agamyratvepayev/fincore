@@ -38,6 +38,7 @@ export type ReportQuery = {
     | "cash"
     | "material"
     | "credit"
+    | "debit"
     | "bio"
     | "loan"
     | "advance"

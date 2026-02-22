@@ -9,6 +9,8 @@ import {
   queryCashTotals,
   queryCreditDetails,
   queryCreditTotals,
+  queryDebitDetails,
+  queryDebitTotals,
   queryIntangibleDetails,
   queryIntangibleTotals,
   queryLoanDetails,
@@ -97,6 +99,20 @@ export class BalanceSheetRepository {
       ...this.dateParams(overrides)
     };
     return executeNamedQuery<Record<string, unknown>>(queryCreditDetails(params), params);
+  }
+
+  async fetchDebitTotals(overrides?: DateParams) {
+    const params = this.dateParams(overrides);
+    return executeNamedQuery<Record<string, unknown>>(queryDebitTotals(params), params);
+  }
+
+  async fetchDebitDetails(code: string, overrides?: DateParams, page?: { offset?: number; limit?: number }) {
+    const params = {
+      code: String(code ?? "").trim(),
+      ...this.pageParams(page),
+      ...this.dateParams(overrides)
+    };
+    return executeNamedQuery<Record<string, unknown>>(queryDebitDetails(params), params);
   }
 
   async fetchBioTotals(overrides?: DateParams) {
@@ -188,7 +204,7 @@ export class BalanceSheetRepository {
       category?: string;
       offset?: number;
       limit?: number;
-      kind?: "cash" | "material" | "credit" | "bio" | "loan" | "advance" | "intangible" | "share";
+      kind?: "cash" | "material" | "credit" | "debit" | "bio" | "loan" | "advance" | "intangible" | "share";
     }
   ) {
     void period;
@@ -200,6 +216,12 @@ export class BalanceSheetRepository {
     }
     if (filters.kind === "credit") {
       return this.fetchCreditDetails(filters.category ?? "", filters, {
+        offset: filters.offset ?? 0,
+        limit: filters.limit ?? 100
+      });
+    }
+    if (filters.kind === "debit") {
+      return this.fetchDebitDetails(filters.category ?? "", filters, {
         offset: filters.offset ?? 0,
         limit: filters.limit ?? 100
       });
@@ -273,6 +295,19 @@ export class BalanceSheetRepository {
     return rows.map((row, index) => ({
       code: String(row.CODE ?? row.code ?? `CREDIT_${index + 1}`),
       label: String(row.DEFINITION_ ?? row.definition_ ?? row.DEFINITION ?? row.definition ?? `Credit ${index + 1}`),
+      amount: Number(row.AMOUNT ?? row.amount ?? 0),
+      lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
+      reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0),
+      group: String(row.GROUP_ ?? row.group_ ?? "BEYLEKILER")
+    }));
+  }
+
+  async getDebitLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
+    void period;
+    const rows = await this.fetchDebitTotals(overrides);
+    return rows.map((row, index) => ({
+      code: String(row.CODE ?? row.code ?? `DEBIT_${index + 1}`),
+      label: String(row.DEFINITION_ ?? row.definition_ ?? row.DEFINITION ?? row.definition ?? `Debit ${index + 1}`),
       amount: Number(row.AMOUNT ?? row.amount ?? 0),
       lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
       reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0),

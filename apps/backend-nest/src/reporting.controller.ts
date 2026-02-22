@@ -186,6 +186,8 @@ export class ReportingController {
             ? "material"
             : this.parseOptionalText((query as Record<string, unknown>).kind) === "credit"
               ? "credit"
+              : this.parseOptionalText((query as Record<string, unknown>).kind) === "debit"
+                ? "debit"
               : this.parseOptionalText((query as Record<string, unknown>).kind) === "bio"
                 ? "bio"
                 : this.parseOptionalText((query as Record<string, unknown>).kind) === "loan"
@@ -239,6 +241,27 @@ export class ReportingController {
       const parsedMonth = this.parseOptionalNumber(query.month);
       const shouldIgnoreDates = parsedYear != null || parsedMonth != null;
       return await provider.balance.creditTotals(tenantId, {
+        from: query.from,
+        to: query.to,
+        client: this.parseOptionalText(query.client) ?? this.queryCode(query),
+        year: parsedYear,
+        month: parsedMonth,
+        startDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.startDate ?? query.startdate),
+        endDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate)
+      });
+    } catch (error) {
+      throw new BadRequestException((error as Error).message);
+    }
+  }
+
+  @Get("/tenants/:tenantId/reports/balance-sheet/debit-totals")
+  async balanceDebitTotals(@Param("tenantId") tenantId: string, @Query() query: ReportQuery) {
+    const provider = this.assertSupportedTenant(tenantId);
+    try {
+      const parsedYear = this.parseOptionalNumber(query.year);
+      const parsedMonth = this.parseOptionalNumber(query.month);
+      const shouldIgnoreDates = parsedYear != null || parsedMonth != null;
+      return await provider.balance.debitTotals(tenantId, {
         from: query.from,
         to: query.to,
         client: this.parseOptionalText(query.client) ?? this.queryCode(query),

@@ -29,6 +29,7 @@ export interface BalanceReportingProvider {
   details(tenantId: string, filters?: BalanceDetailsFilters): Promise<unknown>;
   materialTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
   creditTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
+  debitTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
   bioTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
   loanTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
   advanceTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;

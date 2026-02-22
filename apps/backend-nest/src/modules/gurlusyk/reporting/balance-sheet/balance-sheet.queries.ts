@@ -39,6 +39,16 @@ export function queryCreditDetails(params: DateParams = {}) {
   return "EXEC GURBALCREDET @CODE = :code, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
 }
 
+export function queryDebitTotals(params: DateParams = {}) {
+  void params;
+  return "EXEC GURBALDEBTOT @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
+export function queryDebitDetails(params: DateParams = {}) {
+  void params;
+  return "EXEC GURBALDEBDET @CODE = :code, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
+}
+
 export function queryBioTotals(params: DateParams = {}) {
   void params;
   return "EXEC GURBALBIOTOT @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
