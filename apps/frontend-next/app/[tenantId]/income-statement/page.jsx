@@ -1,0 +1,134 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { resolveTenant } from "../../../lib/platform/tenant/resolve-tenant";
+import { fetchIncomeClients, fetchIncomeDateFilters, fetchIncomeRevenueTotals } from "../../../lib/platform/reporting/api";
+import IncomeFiltersCard from "../../../components/income-filters-card";
+
+function toNumber(value, fallback) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+function buildQuery(params) {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value == null) return;
+    const text = String(value).trim();
+    if (!text) return;
+    qs.set(key, text);
+  });
+  return qs.toString();
+}
+
+function money(value) {
+  return Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export default async function IncomeStatementTotalsPage({ params, searchParams }) {
+  const { tenantId } = await params;
+  const tenant = resolveTenant(tenantId);
+  if (!tenant) notFound();
+
+  const rawQuery = (await searchParams) ?? {};
+  const defaultClientCode = "120.05.001";
+  const year = rawQuery.year ? String(rawQuery.year) : "";
+  const month = rawQuery.month ? String(rawQuery.month) : "";
+  const startDate = rawQuery.startDate ? String(rawQuery.startDate) : "";
+  const endDate = rawQuery.endDate ? String(rawQuery.endDate) : "";
+  const code = rawQuery.code ? String(rawQuery.code) : defaultClientCode;
+
+  const [dateFilterData, clientsData, totalsData] = await Promise.all([
+    fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
+    fetchIncomeClients(tenantId).catch(() => []),
+    fetchIncomeRevenueTotals(tenantId, {
+      code: code || undefined,
+      year: year || undefined,
+      month: month || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined
+    })
+  ]);
+
+  const categories = Array.isArray(totalsData?.categories) ? totalsData.categories : [];
+  const totalTmt = Number(totalsData?.totals?.totalTmt ?? 0);
+  const totalUsd = Number(totalsData?.totals?.totalUsd ?? 0);
+  const years = Array.isArray(dateFilterData?.years) ? dateFilterData.years : [];
+  const months = Array.isArray(dateFilterData?.months) ? dateFilterData.months : [];
+  const clients = Array.isArray(clientsData) ? clientsData : [];
+  const selectedClient =
+    clients.find((client) => String(client.code ?? "").trim() === code) ?? null;
+  const selectedClientName = String(
+    selectedClient?.name ?? selectedClient?.code ?? code
+  ).trim();
+
+  return (
+    <div className="layout-grid income-layout-grid income-totals-layout">
+      <div className="panel income-panel">
+        <div className="panel-title income-panel-title">
+          <div className="income-title-client">{(selectedClientName || code).toUpperCase()}</div>
+        </div>
+        <table className="income-table">
+          <thead>
+            <tr>
+              <th style={{ textAlign: "left" }}></th>
+              <th>TMT</th>
+              <th>USD</th>
+            </tr>
+          </thead>
+          <tbody>
+            {categories.length === 0 ? (
+              <tr>
+                <td colSpan={3} style={{ textAlign: "center", color: "#64748b" }}>
+                  No data
+                </td>
+              </tr>
+            ) : (
+              <>
+                <tr className="income-main-total-row">
+                  <td style={{ textAlign: "left" }}>Girdeji</td>
+                  <td>{money(totalTmt)}</td>
+                  <td>{money(totalUsd)}</td>
+                </tr>
+                {categories.map((row, idx) => {
+                  const id = toNumber(row.id, idx + 1);
+                  const detailsQuery = buildQuery({
+                    category: id,
+                    code,
+                    year,
+                    month,
+                    startDate,
+                    endDate
+                  });
+                  return (
+                    <tr key={`${id}-${idx}`} className="income-category-row">
+                      <td style={{ textAlign: "left" }}>
+                        <Link href={`/${tenantId}/income-statement/details?${detailsQuery}`} className="income-category-link">
+                          <span className="dot"></span>
+                          {row.name || "-"}
+                        </Link>
+                      </td>
+                      <td>{money(row.lineNet)}</td>
+                      <td>{money(row.reportNet)}</td>
+                    </tr>
+                  );
+                })}
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <IncomeFiltersCard
+        title="▽ Filters"
+        code={code}
+        month={month}
+        year={year}
+        startDate={startDate}
+        endDate={endDate}
+        clients={clients}
+        months={months}
+        years={years}
+      />
+    </div>
+  );
+}

@@ -74,17 +74,14 @@ export class ReportingController {
   async incomeRevenueTotals(@Param("tenantId") tenantId: string, @Query() query: ReportQuery) {
     const provider = this.assertSupportedTenant(tenantId);
     try {
-      const parsedYear = this.parseOptionalNumber(query.year);
-      const parsedMonth = this.parseOptionalNumber(query.month);
-      const shouldIgnoreDates = parsedYear != null || parsedMonth != null;
       return await provider.income.revenueTotals(tenantId, {
         from: query.from,
         to: query.to,
         client: this.parseOptionalText(query.client) ?? this.queryCode(query),
-        year: parsedYear,
-        month: parsedMonth,
-        startDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.startDate ?? query.startdate),
-        endDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate)
+        year: this.parseOptionalNumber(query.year),
+        month: this.parseOptionalNumber(query.month),
+        startDate: this.parseOptionalText(query.startDate ?? query.startdate),
+        endDate: this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
       throw new BadRequestException((error as Error).message);
@@ -95,26 +92,19 @@ export class ReportingController {
   async incomeDetails(@Param("tenantId") tenantId: string, @Query() query: ReportQuery) {
     const provider = this.assertSupportedTenant(tenantId);
     try {
-      const kind = query.kind ?? "revenue";
-      if (kind !== "revenue" && kind !== "expense") {
-        throw new BadRequestException("kind must be 'revenue' or 'expense'");
-      }
-      const parsedYear = this.parseOptionalNumber(query.year);
-      const parsedMonth = this.parseOptionalNumber(query.month);
-      const shouldIgnoreDates = parsedYear != null || parsedMonth != null;
       return await provider.income.details(
         tenantId,
-        kind,
+        "revenue",
         query.from,
         query.to,
         this.parseOptionalText(query.client) ?? this.queryCode(query),
-        parsedYear,
-        parsedMonth,
-        shouldIgnoreDates ? undefined : this.parseOptionalText(query.startDate ?? query.startdate),
-        shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate),
+        this.parseOptionalNumber(query.year),
+        this.parseOptionalNumber(query.month),
+        this.parseOptionalText(query.startDate ?? query.startdate),
+        this.parseOptionalText(query.endDate ?? query.enddate),
         query.category,
-        Number(query.offset ?? 0),
-        Number(query.limit ?? 50)
+        this.parseOptionalNumber(query.offset),
+        this.parseOptionalNumber(query.limit)
       );
     } catch (error) {
       if (error instanceof BadRequestException) throw error;

@@ -9,13 +9,9 @@ export class IncomeStatementService {
   async execute(tenantId: string, from?: string, to?: string): Promise<ReportResponse> {
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(from, to);
-    const [revenueRows, expenseRows] = await Promise.all([
-      this.repository.getRevenueTotals(period, undefined, getDefaultClientCode(tenantId)),
-      this.repository.getExpenseTotals(period, undefined, getDefaultClientCode(tenantId))
-    ]);
+    const rows = await this.repository.getRevenueTotals(period, undefined, getDefaultClientCode(tenantId));
 
-    const sum = <T>(items: T[], selector: (item: T) => number) =>
-      items.reduce((acc, item) => acc + selector(item), 0);
+    const revenueAmount = rows.reduce((acc, row) => acc + row.lineNet, 0);
 
     return {
       tenantId,
@@ -23,18 +19,7 @@ export class IncomeStatementService {
       period,
       currency: "USD",
       generatedAt: new Date().toISOString(),
-      lines: [
-        {
-          code: "REV",
-          label: "Revenue",
-          amount: sum(revenueRows, (row) => row.lineNet)
-        },
-        {
-          code: "EXP",
-          label: "Expenses",
-          amount: sum(expenseRows, (row) => row.lineNet)
-        }
-      ]
+      lines: [{ code: "REV", label: "Revenue", amount: revenueAmount }]
     };
   }
 
@@ -113,57 +98,26 @@ export class IncomeStatementService {
   ) {
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(filters?.from, filters?.to);
-    const filterOverrides = {
-      year: filters?.year,
-      month: filters?.month,
-      startDate: filters?.startDate,
-      endDate: filters?.endDate
-    };
-    const clientCode = filters?.client || getDefaultClientCode(tenantId);
-    const [rows, expenseRows] = await Promise.all([
-      this.repository.getRevenueTotals(period, filterOverrides, clientCode),
-      this.repository.getExpenseTotals(period, filterOverrides, clientCode)
-    ]);
-
-    const sum = <T>(items: T[], selector: (item: T) => number) =>
-      items.reduce((acc, item) => acc + selector(item), 0);
-
-    const revenueTotalTmt = sum(rows, (row) => row.lineNet);
-    const revenueTotalUsd = sum(rows, (row) => row.reportNet);
-    const expenseTotalTmt = sum(expenseRows, (row) => row.lineNet);
-    const expenseTotalUsd = sum(expenseRows, (row) => row.reportNet);
+    const rows = await this.repository.getRevenueTotals(
+      period,
+      {
+        year: filters?.year,
+        month: filters?.month,
+        startDate: filters?.startDate,
+        endDate: filters?.endDate
+      },
+      filters?.client || getDefaultClientCode(tenantId)
+    );
 
     return {
       tenantId,
       report: "income-statement-revenue-totals",
       period,
       totals: {
-        revenueTotalTmt,
-        revenueTotalUsd,
-        expenseTotalTmt,
-        expenseTotalUsd,
-        peydaTotalTmt: revenueTotalTmt - expenseTotalTmt,
-        peydaTotalUsd: revenueTotalUsd - expenseTotalUsd,
-        satyslarTmt: 0,
-        satyslarUsd: 0,
-        gymmatyTmt: 0,
-        gymmatyUsd: 0,
-        hyzmatlarTmt: 0,
-        hyzmatlarUsd: 0
+        totalTmt: rows.reduce((acc, row) => acc + row.lineNet, 0),
+        totalUsd: rows.reduce((acc, row) => acc + row.reportNet, 0)
       },
-      revenueByCategory: rows.map((row) => ({
-        id: row.id || "",
-        name: row.name || row.group || "Category",
-        tmt: row.lineNet,
-        usd: row.reportNet
-      })),
-      expenseByDefinition: expenseRows.map((row) => ({
-        id: row.id || "",
-        name: row.name || "",
-        definition: row.definition,
-        tmt: row.lineNet,
-        usd: row.reportNet
-      }))
+      categories: rows
     };
   }
 
@@ -177,22 +131,39 @@ export class IncomeStatementService {
     month?: number,
     startDate?: string,
     endDate?: string,
-    category = "ALL",
-    offset = 0,
-    limit = 50
+    category?: string,
+    offset?: number,
+    limit?: number
   ) {
+    void kind;
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(from, to);
-    const detail = { category, offset, limit };
-    const overrides = {
-      year,
-      month,
-      startDate: startDate ?? from,
-      endDate: endDate ?? to
-    };
-    const code = clientCode || getDefaultClientCode(tenantId);
 
-    if (kind === "revenue") return this.repository.getRevenueDetails(period, detail, overrides, code);
-    return this.repository.getExpenseDetails(period, detail, overrides, code);
+    const parsedCategory = category == null || String(category).trim() === "" ? undefined : Number(category);
+
+    const rows = await this.repository.getRevenueDetails(
+      period,
+      {
+        category: Number.isFinite(parsedCategory) ? parsedCategory : undefined,
+        offset,
+        limit,
+        year,
+        month,
+        startDate,
+        endDate
+      },
+      clientCode || getDefaultClientCode(tenantId)
+    );
+
+    return {
+      tenantId,
+      report: "income-statement-revenue-details",
+      period,
+      paging: {
+        offset: offset ?? 0,
+        limit: limit ?? 50
+      },
+      rows
+    };
   }
 }

@@ -67,18 +67,15 @@ export async function incomeStatementController(
       try {
         const { tenantId } = request.params as { tenantId: string };
         const query = request.query as ReportQuery & { code?: string };
-        const parsedYear = parseOptionalNumber(query.year);
-        const parsedMonth = parseOptionalNumber(query.month);
-        const shouldIgnoreDates = parsedYear != null || parsedMonth != null;
 
         return await service.revenueTotals(tenantId, {
           from: query.from,
           to: query.to,
           client: parseOptionalText(query.client ?? query.code),
-          year: parsedYear,
-          month: parsedMonth,
-          startDate: shouldIgnoreDates ? undefined : parseOptionalText(query.startDate ?? query.startdate),
-          endDate: shouldIgnoreDates ? undefined : parseOptionalText(query.endDate ?? query.enddate)
+          year: parseOptionalNumber(query.year),
+          month: parseOptionalNumber(query.month),
+          startDate: parseOptionalText(query.startDate ?? query.startdate),
+          endDate: parseOptionalText(query.endDate ?? query.enddate)
         });
       } catch (error) {
         return reply.status(400).send({ message: (error as Error).message });
@@ -93,28 +90,19 @@ export async function incomeStatementController(
       try {
         const { tenantId } = request.params as { tenantId: string };
         const query = request.query as ReportQuery & { code?: string };
-        const kind = query.kind ?? "revenue";
-        if (kind !== "revenue" && kind !== "expense") {
-          return reply.status(400).send({ message: "kind must be 'revenue' or 'expense'" });
-        }
-
-        const parsedYear = parseOptionalNumber(query.year);
-        const parsedMonth = parseOptionalNumber(query.month);
-        const shouldIgnoreDates = parsedYear != null || parsedMonth != null;
-
         return await service.details(
           tenantId,
-          kind,
+          "revenue",
           query.from,
           query.to,
           parseOptionalText(query.client ?? query.code),
-          parsedYear,
-          parsedMonth,
-          shouldIgnoreDates ? undefined : parseOptionalText(query.startDate ?? query.startdate),
-          shouldIgnoreDates ? undefined : parseOptionalText(query.endDate ?? query.enddate),
+          parseOptionalNumber(query.year),
+          parseOptionalNumber(query.month),
+          parseOptionalText(query.startDate ?? query.startdate),
+          parseOptionalText(query.endDate ?? query.enddate),
           query.category,
-          Number(query.offset ?? 0),
-          Number(query.limit ?? 50)
+          parseOptionalNumber(query.offset),
+          parseOptionalNumber(query.limit)
         );
       } catch (error) {
         return reply.status(400).send({ message: (error as Error).message });

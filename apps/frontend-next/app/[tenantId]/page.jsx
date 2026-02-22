@@ -1,17 +1,17 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { resolveTenant } from "../../lib/platform/tenant/resolve-tenant";
+import { getTenantReports } from "../../lib/platform/reporting/reports";
 
 export default async function TenantPage({ params }) {
   const { tenantId } = await params;
   const tenant = resolveTenant(tenantId);
   if (!tenant) notFound();
+  const reports = getTenantReports(tenantId);
+  const defaultReport = reports[0];
 
-  return (
-    <div>
-      <h1 style={{ marginTop: 0 }}>Reports Are Being Rebuilt</h1>
-      <p style={{ marginBottom: 0, color: "#475569" }}>
-        Tenant: <strong>{tenant.name}</strong>. Login, logout, tenant navigation, and user management are active.
-      </p>
-    </div>
-  );
+  if (defaultReport) {
+    redirect(`/${tenantId}/${defaultReport.slug}`);
+  }
+
+  return <p style={{ marginBottom: 0, color: "#475569" }}>No reports configured yet for this tenant.</p>;
 }
