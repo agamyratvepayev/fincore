@@ -5,6 +5,7 @@ import {
   fetchBalanceBioTotals,
   fetchBalanceCreditTotals,
   fetchBalanceDetails,
+  fetchBalanceLoanTotals,
   fetchBalanceMaterialTotals,
   fetchBalanceTotals,
   fetchIncomeDateFilters
@@ -61,7 +62,15 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
 
   const rawQuery = (await searchParams) ?? {};
   const kind =
-    rawQuery.kind === "material" ? "material" : rawQuery.kind === "credit" ? "credit" : rawQuery.kind === "bio" ? "bio" : "cash";
+    rawQuery.kind === "material"
+      ? "material"
+      : rawQuery.kind === "credit"
+        ? "credit"
+        : rawQuery.kind === "bio"
+          ? "bio"
+          : rawQuery.kind === "loan"
+            ? "loan"
+            : "cash";
   const showAmountColumn = kind === "material" || kind === "bio";
   const category = rawQuery.category ? String(rawQuery.category) : "1";
   const year = rawQuery.year ? String(rawQuery.year) : "";
@@ -72,7 +81,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const limit = Math.max(1, toNumber(rawQuery.limit, 50));
   const offset = Math.max(0, toNumber(rawQuery.offset, 0));
 
-  const [dateFilterData, detailsData, totalsData, materialTotalsData, creditTotalsData, bioTotalsData] = await Promise.all([
+  const [dateFilterData, detailsData, totalsData, materialTotalsData, creditTotalsData, bioTotalsData, loanTotalsData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
     fetchBalanceDetails(tenantId, {
       kind,
@@ -105,6 +114,12 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
       month: month || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined
+    }).catch(() => ({ categories: [] })),
+    fetchBalanceLoanTotals(tenantId, {
+      year: year || undefined,
+      month: month || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined
     }).catch(() => ({ categories: [] }))
   ]);
 
@@ -118,7 +133,17 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const materialRows = Array.isArray(materialTotalsData?.categories) ? materialTotalsData.categories : [];
   const creditRows = Array.isArray(creditTotalsData?.categories) ? creditTotalsData.categories : [];
   const bioRows = Array.isArray(bioTotalsData?.categories) ? bioTotalsData.categories : [];
-  const sourceRows = kind === "material" ? materialRows : kind === "credit" ? creditRows : kind === "bio" ? bioRows : totalsRows;
+  const loanRows = Array.isArray(loanTotalsData?.categories) ? loanTotalsData.categories : [];
+  const sourceRows =
+    kind === "material"
+      ? materialRows
+      : kind === "credit"
+        ? creditRows
+        : kind === "bio"
+          ? bioRows
+          : kind === "loan"
+            ? loanRows
+            : totalsRows;
   const categoryName = String(
     sourceRows.find((row) => String(row.code ?? "") === String(category))?.label ??
       allRows[0]?.DEFINITION_ ??
@@ -240,7 +265,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
               <tr>
                 <th className="income-details-date-col" style={{ textAlign: "center" }}>Date</th>
                 <th style={{ textAlign: "center" }}>{kind === "material" || kind === "bio" ? "Item" : "Type"}</th>
-                <th style={{ textAlign: "center" }}>{kind === "credit" ? "Whouse" : "Client"}</th>
+                <th style={{ textAlign: "center" }}>{kind === "credit" || kind === "loan" ? "Whouse" : "Client"}</th>
                 {showAmountColumn ? <th style={{ textAlign: "center" }}>Amount</th> : null}
                 <th style={{ textAlign: "center" }}>Line Exp</th>
                 <th className="income-details-money-col">TMT</th>

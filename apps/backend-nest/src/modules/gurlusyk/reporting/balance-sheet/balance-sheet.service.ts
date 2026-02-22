@@ -53,7 +53,7 @@ export class BalanceSheetService {
       category?: string;
       offset?: number;
       limit?: number;
-      kind?: "cash" | "material" | "credit" | "bio";
+      kind?: "cash" | "material" | "credit" | "bio" | "loan";
     }
   ) {
     await ensureReportingTenantReady(tenantId);
@@ -163,6 +163,39 @@ export class BalanceSheetService {
     return {
       tenantId,
       report: "balance-sheet-bio-totals",
+      period,
+      totals: {
+        totalTmt: rows.reduce((acc, row) => acc + Number(row.lineNet ?? row.amount ?? 0), 0),
+        totalUsd: rows.reduce((acc, row) => acc + Number(row.reportNet ?? 0), 0)
+      },
+      categories: rows
+    };
+  }
+
+  async loanTotals(
+    tenantId: string,
+    filters?: {
+      from?: string;
+      to?: string;
+      year?: number;
+      month?: number;
+      startDate?: string;
+      endDate?: string;
+      client?: string;
+    }
+  ) {
+    await ensureReportingTenantReady(tenantId);
+    const period = buildReportPeriod(filters?.from, filters?.to);
+    const rows = await this.repository.getLoanLines(period, {
+      year: filters?.year,
+      month: filters?.month,
+      startDate: filters?.startDate,
+      endDate: filters?.endDate
+    });
+
+    return {
+      tenantId,
+      report: "balance-sheet-loan-totals",
       period,
       totals: {
         totalTmt: rows.reduce((acc, row) => acc + Number(row.lineNet ?? row.amount ?? 0), 0),

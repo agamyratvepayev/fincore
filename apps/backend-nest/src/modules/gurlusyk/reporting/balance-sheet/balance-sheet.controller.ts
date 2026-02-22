@@ -66,6 +66,8 @@ export async function balanceSheetController(
                 ? "credit"
                 : parseOptionalText((query as Record<string, unknown>).kind) === "bio"
                   ? "bio"
+                  : parseOptionalText((query as Record<string, unknown>).kind) === "loan"
+                    ? "loan"
                 : "cash",
           category: parseOptionalText(query.category),
           offset: parseOptionalNumber(query.offset),
@@ -142,6 +144,31 @@ export async function balanceSheetController(
         const parsedMonth = parseOptionalNumber(query.month);
         const shouldIgnoreDates = parsedYear != null || parsedMonth != null;
         return await service.bioTotals(tenantId, {
+          from: query.from,
+          to: query.to,
+          client: parseOptionalText(query.client ?? query.code),
+          year: parsedYear,
+          month: parsedMonth,
+          startDate: shouldIgnoreDates ? undefined : parseOptionalText(query.startDate ?? query.startdate),
+          endDate: shouldIgnoreDates ? undefined : parseOptionalText(query.endDate ?? query.enddate)
+        });
+      } catch (error) {
+        return reply.status(400).send({ message: (error as Error).message });
+      }
+    }
+  );
+
+  server.get(
+    "/tenants/:tenantId/reports/balance-sheet/loan-totals",
+    { preHandler: tenantMiddleware },
+    async (request, reply) => {
+      try {
+        const { tenantId } = request.params as { tenantId: string };
+        const query = request.query as ReportQuery & { code?: string };
+        const parsedYear = parseOptionalNumber(query.year);
+        const parsedMonth = parseOptionalNumber(query.month);
+        const shouldIgnoreDates = parsedYear != null || parsedMonth != null;
+        return await service.loanTotals(tenantId, {
           from: query.from,
           to: query.to,
           client: parseOptionalText(query.client ?? query.code),

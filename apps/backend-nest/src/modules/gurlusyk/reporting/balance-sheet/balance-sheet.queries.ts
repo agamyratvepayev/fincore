@@ -48,3 +48,13 @@ export function queryBioDetails(params: DateParams = {}) {
   void params;
   return "EXEC GURBALBIODET @CODE = :code, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
 }
+
+export function queryLoanTotals(params: DateParams = {}) {
+  void params;
+  return "EXEC GURBALLOATOT @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
+export function queryLoanDetails(params: DateParams = {}) {
+  void params;
+  return "EXEC GURBALLOADET @CODE = :code, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
+}
