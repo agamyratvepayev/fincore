@@ -31,6 +31,7 @@ export interface BalanceReportingProvider {
   creditTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
   bioTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
   loanTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
+  advanceTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
 }
 
 export interface TenantReportingProvider {

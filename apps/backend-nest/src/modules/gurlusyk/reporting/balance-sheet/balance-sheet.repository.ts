@@ -1,6 +1,8 @@
 import { executeNamedQuery } from "@fincore/db-mssql/src/query.js";
 import type { ReportLine, ReportPeriod } from "../../../../shared/reporting/reporting.types.js";
 import {
+  queryAdvanceDetails,
+  queryAdvanceTotals,
   queryBioDetails,
   queryBioTotals,
   queryCashDetails,
@@ -121,6 +123,20 @@ export class BalanceSheetRepository {
     return executeNamedQuery<Record<string, unknown>>(queryLoanDetails(params), params);
   }
 
+  async fetchAdvanceTotals(overrides?: DateParams) {
+    const params = this.dateParams(overrides);
+    return executeNamedQuery<Record<string, unknown>>(queryAdvanceTotals(params), params);
+  }
+
+  async fetchAdvanceDetails(code: string, overrides?: DateParams, page?: { offset?: number; limit?: number }) {
+    const params = {
+      code: String(code ?? "").trim(),
+      ...this.pageParams(page),
+      ...this.dateParams(overrides)
+    };
+    return executeNamedQuery<Record<string, unknown>>(queryAdvanceDetails(params), params);
+  }
+
   async getLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
     void period;
     const rows = await this.fetchCashTotals(overrides);
@@ -140,7 +156,7 @@ export class BalanceSheetRepository {
       category?: string;
       offset?: number;
       limit?: number;
-      kind?: "cash" | "material" | "credit" | "bio" | "loan";
+      kind?: "cash" | "material" | "credit" | "bio" | "loan" | "advance";
     }
   ) {
     void period;
@@ -164,6 +180,12 @@ export class BalanceSheetRepository {
     }
     if (filters.kind === "loan") {
       return this.fetchLoanDetails(filters.category ?? "", filters, {
+        offset: filters.offset ?? 0,
+        limit: filters.limit ?? 100
+      });
+    }
+    if (filters.kind === "advance") {
+      return this.fetchAdvanceDetails(filters.category ?? "", filters, {
         offset: filters.offset ?? 0,
         limit: filters.limit ?? 100
       });
@@ -239,6 +261,20 @@ export class BalanceSheetRepository {
         lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
         reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0),
         group: String(row.SPECODE ?? row.specode ?? "")
+      }))
+      .filter((row) => Math.abs(Number(row.amount ?? 0)) > 0.000001);
+  }
+
+  async getAdvanceLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
+    void period;
+    const rows = await this.fetchAdvanceTotals(overrides);
+    return rows
+      .map((row, index) => ({
+        code: String(row.CODE ?? row.code ?? `ADV_${index + 1}`),
+        label: String(row.DEFINITION_ ?? row.definition_ ?? row.DEFINITION ?? row.definition ?? `Advance ${index + 1}`),
+        amount: Number(row.AMOUNT ?? row.amount ?? 0),
+        lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
+        reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0)
       }))
       .filter((row) => Math.abs(Number(row.amount ?? 0)) > 0.000001);
   }
