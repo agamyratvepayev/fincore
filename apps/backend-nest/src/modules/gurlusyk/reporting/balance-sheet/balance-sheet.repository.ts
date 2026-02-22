@@ -14,7 +14,9 @@ import {
   queryLoanDetails,
   queryLoanTotals,
   queryMaterialDetails,
-  queryMaterialTotals
+  queryMaterialTotals,
+  queryShareDetails,
+  queryShareTotals
 } from "./balance-sheet.queries.js";
 
 type DateParams = {
@@ -153,6 +155,20 @@ export class BalanceSheetRepository {
     return executeNamedQuery<Record<string, unknown>>(queryIntangibleDetails(params), params);
   }
 
+  async fetchShareTotals(overrides?: DateParams) {
+    const params = this.dateParams(overrides);
+    return executeNamedQuery<Record<string, unknown>>(queryShareTotals(params), params);
+  }
+
+  async fetchShareDetails(code: string, overrides?: DateParams, page?: { offset?: number; limit?: number }) {
+    const params = {
+      code: String(code ?? "").trim(),
+      ...this.pageParams(page),
+      ...this.dateParams(overrides)
+    };
+    return executeNamedQuery<Record<string, unknown>>(queryShareDetails(params), params);
+  }
+
   async getLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
     void period;
     const rows = await this.fetchCashTotals(overrides);
@@ -172,7 +188,7 @@ export class BalanceSheetRepository {
       category?: string;
       offset?: number;
       limit?: number;
-      kind?: "cash" | "material" | "credit" | "bio" | "loan" | "advance" | "intangible";
+      kind?: "cash" | "material" | "credit" | "bio" | "loan" | "advance" | "intangible" | "share";
     }
   ) {
     void period;
@@ -208,6 +224,12 @@ export class BalanceSheetRepository {
     }
     if (filters.kind === "intangible") {
       return this.fetchIntangibleDetails(filters.category ?? "", filters, {
+        offset: filters.offset ?? 0,
+        limit: filters.limit ?? 100
+      });
+    }
+    if (filters.kind === "share") {
+      return this.fetchShareDetails(filters.category ?? "", filters, {
         offset: filters.offset ?? 0,
         limit: filters.limit ?? 100
       });
@@ -311,6 +333,21 @@ export class BalanceSheetRepository {
         amount: Number(row.AMOUNT ?? row.amount ?? 0),
         lineNet: Number(row.OUTCOST ?? row.outcost ?? 0),
         reportNet: Number(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0)
+      }))
+      .filter((row) => Math.abs(Number(row.amount ?? 0)) > 0.000001);
+  }
+
+  async getShareLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
+    void period;
+    const rows = await this.fetchShareTotals(overrides);
+    return rows
+      .map((row, index) => ({
+        code: String(row.CODE ?? row.code ?? `SHARE_${index + 1}`),
+        label: String(row.DEFINITION_ ?? row.definition_ ?? row.DEFINITION ?? row.definition ?? `Share ${index + 1}`),
+        amount: Number(row.AMOUNT ?? row.amount ?? 0),
+        lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
+        reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0),
+        group: String(row.GROUP_ ?? row.group_ ?? "")
       }))
       .filter((row) => Math.abs(Number(row.amount ?? 0)) > 0.000001);
   }

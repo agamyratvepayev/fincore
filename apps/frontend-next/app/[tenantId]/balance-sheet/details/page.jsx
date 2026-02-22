@@ -9,6 +9,7 @@ import {
   fetchBalanceIntangibleTotals,
   fetchBalanceLoanTotals,
   fetchBalanceMaterialTotals,
+  fetchBalanceShareTotals,
   fetchBalanceTotals,
   fetchIncomeDateFilters
 } from "../../../../lib/platform/reporting/api";
@@ -76,6 +77,8 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
             ? "advance"
               : rawQuery.kind === "intangible"
                 ? "intangible"
+                : rawQuery.kind === "share"
+                  ? "share"
             : "cash";
   const showAmountColumn = kind === "material" || kind === "bio" || kind === "intangible";
   const category = rawQuery.category ? String(rawQuery.category) : "1";
@@ -87,7 +90,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const limit = Math.max(1, toNumber(rawQuery.limit, 50));
   const offset = Math.max(0, toNumber(rawQuery.offset, 0));
 
-  const [dateFilterData, detailsData, totalsData, materialTotalsData, creditTotalsData, bioTotalsData, loanTotalsData, advanceTotalsData, intangibleTotalsData] = await Promise.all([
+  const [dateFilterData, detailsData, totalsData, materialTotalsData, creditTotalsData, bioTotalsData, loanTotalsData, advanceTotalsData, intangibleTotalsData, shareTotalsData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
     fetchBalanceDetails(tenantId, {
       kind,
@@ -138,6 +141,12 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
       month: month || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined
+    }).catch(() => ({ categories: [] })),
+    fetchBalanceShareTotals(tenantId, {
+      year: year || undefined,
+      month: month || undefined,
+      startDate: startDate || undefined,
+      endDate: endDate || undefined
     }).catch(() => ({ categories: [] }))
   ]);
 
@@ -154,6 +163,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const loanRows = Array.isArray(loanTotalsData?.categories) ? loanTotalsData.categories : [];
   const advanceRows = Array.isArray(advanceTotalsData?.categories) ? advanceTotalsData.categories : [];
   const intangibleRows = Array.isArray(intangibleTotalsData?.categories) ? intangibleTotalsData.categories : [];
+  const shareRows = Array.isArray(shareTotalsData?.categories) ? shareTotalsData.categories : [];
   const sourceRows =
     kind === "material"
       ? materialRows
@@ -164,9 +174,11 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
           : kind === "loan"
             ? loanRows
             : kind === "advance"
-              ? advanceRows
-              : kind === "intangible"
+            ? advanceRows
+            : kind === "intangible"
                 ? intangibleRows
+                : kind === "share"
+                  ? shareRows
             : totalsRows;
   const categoryName = String(
     sourceRows.find((row) => String(row.code ?? "") === String(category))?.label ??

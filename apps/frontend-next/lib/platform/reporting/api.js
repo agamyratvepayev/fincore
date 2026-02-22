@@ -140,3 +140,10 @@ export async function fetchBalanceIntangibleTotals(tenantId, filters = {}) {
   if (!response.ok) throw new Error(`Failed to load balance intangible totals (${response.status})`);
   return response.json();
 }
+
+export async function fetchBalanceShareTotals(tenantId, filters = {}) {
+  const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/share-totals`, filters);
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Failed to load balance share totals (${response.status})`);
+  return response.json();
+}

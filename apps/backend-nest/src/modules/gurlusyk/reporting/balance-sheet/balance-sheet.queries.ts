@@ -78,3 +78,13 @@ export function queryIntangibleDetails(params: DateParams = {}) {
   void params;
   return "EXEC GURBALINTDET @CODE = :code, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
 }
+
+export function queryShareTotals(params: DateParams = {}) {
+  void params;
+  return "EXEC GURBALSHATOT @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
+export function queryShareDetails(params: DateParams = {}) {
+  void params;
+  return "EXEC GURBALSHADET @CODE = :code, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate, @OFFSET = :offset, @LIMIT = :limit";
+}

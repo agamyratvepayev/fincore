@@ -33,6 +33,7 @@ export interface BalanceReportingProvider {
   loanTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
   advanceTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
   intangibleTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
+  shareTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
 }
 
 export interface TenantReportingProvider {

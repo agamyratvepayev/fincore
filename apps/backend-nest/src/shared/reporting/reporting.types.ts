@@ -41,7 +41,8 @@ export type ReportQuery = {
     | "bio"
     | "loan"
     | "advance"
-    | "intangible";
+    | "intangible"
+    | "share";
   category?: string;
   offset?: number;
   limit?: number;
