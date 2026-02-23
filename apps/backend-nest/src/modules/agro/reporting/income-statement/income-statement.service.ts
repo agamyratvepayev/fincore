@@ -95,15 +95,39 @@ export class IncomeStatementService {
     };
   }
 
-  async expenseTotals(tenantId: string, filters?: { from?: string; to?: string }) {
-    const period = buildReportPeriod(filters?.from, filters?.to);
+  async expenseTotals(
+    tenantId: string,
+    filters?: {
+      from?: string;
+      to?: string;
+      year?: number;
+      month?: number;
+      startDate?: string;
+      endDate?: string;
+    }
+  ) {
     await ensureReportingTenantReady(tenantId);
+    const period = buildReportPeriod(filters?.from, filters?.to);
+    const rows = await this.repository.getExpenseTotals({
+      year: filters?.year,
+      month: filters?.month,
+      startDate: filters?.startDate,
+      endDate: filters?.endDate
+    });
     return {
       tenantId,
       report: "income-statement-expense-totals",
       period,
-      totals: { totalTmt: 0, totalUsd: 0 },
-      categories: []
+      totals: {
+        totalTmt: rows.reduce((acc, row) => acc + Number(row.lineNet ?? 0), 0),
+        totalUsd: rows.reduce((acc, row) => acc + Number(row.reportNet ?? 0), 0)
+      },
+      categories: rows.map((row) => ({
+        id: row.id,
+        name: row.category,
+        lineNet: row.lineNet,
+        reportNet: row.reportNet
+      }))
     };
   }
 
@@ -137,10 +161,10 @@ export class IncomeStatementService {
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(from, to);
 
-    if (kind !== "revenue") {
+    if (kind === "balance") {
       return {
         tenantId,
-        report: "income-statement-revenue-details",
+        report: "income-statement-balance-details",
         period,
         paging: { offset: offset ?? 0, limit: limit ?? 50 },
         rows: []
@@ -150,17 +174,28 @@ export class IncomeStatementService {
     const parsedCategoryRaw = category == null || String(category).trim() === "" ? undefined : String(category).trim();
     const isGymmaty = String(parsedCategoryRaw ?? "").toUpperCase() === "GYMMATY";
     const parsedCategory = parsedCategoryRaw != null ? Number(parsedCategoryRaw) : undefined;
-    const validId = isGymmaty ? 2 : parsedCategory === 1 ? 1 : 2;
+    const validId = Number.isFinite(parsedCategory) ? Number(parsedCategory) : kind === "revenue" ? 2 : 1;
 
-    const rows = await this.repository.getRevenueDetails({
-      id: validId,
-      offset,
-      limit,
-      year,
-      month,
-      startDate,
-      endDate
-    });
+    const rows =
+      kind === "expense"
+        ? await this.repository.getExpenseDetails({
+            id: validId,
+            offset,
+            limit,
+            year,
+            month,
+            startDate,
+            endDate
+          })
+        : await this.repository.getRevenueDetails({
+            id: isGymmaty ? 2 : validId,
+            offset,
+            limit,
+            year,
+            month,
+            startDate,
+            endDate
+          });
     const resultRows = isGymmaty
       ? rows.map((row) => ({
           ...row,
@@ -168,11 +203,22 @@ export class IncomeStatementService {
           LINENET: -Number(row.OUTCOST ?? row.outcost ?? 0),
           REPORTNET: -Number(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0)
         }))
-      : rows;
+      : kind === "expense"
+        ? rows.map((row) => {
+            const groupValue = String(
+              row.GROUP_ ?? row.group_ ?? row.GROUP ?? row.group ?? ""
+            ).trim();
+            return {
+              ...row,
+              GROUP: groupValue,
+              GROUP_: groupValue
+            };
+          })
+        : rows;
 
     return {
       tenantId,
-      report: "income-statement-revenue-details",
+      report: kind === "expense" ? "income-statement-expense-details" : "income-statement-revenue-details",
       period,
       paging: {
         offset: offset ?? 0,

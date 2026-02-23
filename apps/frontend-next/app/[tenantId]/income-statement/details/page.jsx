@@ -61,19 +61,30 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
   const defaultClientCode = "120.05.001";
   const kind = rawQuery.kind === "expense" ? "expense" : rawQuery.kind === "balance" ? "balance" : "revenue";
   const rawCategory = rawQuery.category ? String(rawQuery.category) : isAgro ? "2" : "1";
-  const isGymmatyView = isAgro && (String(rawQuery.gymmaty ?? "") === "1" || rawCategory.toUpperCase() === "GYMMATY");
-  const category = isAgro ? (rawCategory === "1" ? "1" : "2") : rawCategory;
+  const isGymmatyView =
+    isAgro && kind === "revenue" && (String(rawQuery.gymmaty ?? "") === "1" || rawCategory.toUpperCase() === "GYMMATY");
+  const category = isAgro
+    ? kind === "revenue"
+      ? rawCategory === "1"
+        ? "1"
+        : "2"
+      : String(Math.max(1, toNumber(rawCategory, 1)))
+    : rawCategory;
   const code = isAgro ? "" : rawQuery.code ? String(rawQuery.code) : defaultClientCode;
   const year = rawQuery.year ? String(rawQuery.year) : "";
   const month = rawQuery.month ? String(rawQuery.month) : "";
   const startDate = rawQuery.startDate ? String(rawQuery.startDate) : "";
   const endDate = rawQuery.endDate ? String(rawQuery.endDate) : "";
-  const groupParamKey = isAgro ? "whouse" : kind === "expense" || kind === "balance" ? "type" : "specode";
+  const groupParamKey = isAgro ? (kind === "expense" ? "group" : "whouse") : kind === "expense" || kind === "balance" ? "type" : "specode";
   const selectedGroup =
     isAgro
-      ? rawQuery.whouse
-        ? String(rawQuery.whouse).trim()
-        : ""
+      ? kind === "expense"
+        ? rawQuery.group
+          ? String(rawQuery.group).trim()
+          : ""
+        : rawQuery.whouse
+          ? String(rawQuery.whouse).trim()
+          : ""
       : kind === "expense"
       ? rawQuery.type
         ? String(rawQuery.type).trim()
@@ -113,9 +124,11 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
   const defaultCategoryName = isAgro
     ? isGymmatyView
       ? "Gymmaty"
-      : category === "1"
-        ? "Hyzmatlar"
-        : "Satyslar"
+      : kind === "expense"
+        ? `Category ${category}`
+        : category === "1"
+          ? "Hyzmatlar"
+          : "Satyslar"
     : category === "1"
       ? "Edilen is F2"
       : category === "2"
@@ -131,9 +144,11 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
       allRows[0]?.name ??
       defaultCategoryName
   ).trim();
-  const groupLabel = isAgro ? "Whouse" : kind === "expense" ? "Type" : kind === "balance" ? "Type" : "Specode";
+  const groupLabel = isAgro ? (kind === "expense" ? "Group" : "Whouse") : kind === "expense" ? "Type" : kind === "balance" ? "Type" : "Specode";
   const normalizeGroup = isAgro
-    ? (row) => String(row?.WHOUSE ?? row?.whouse ?? "").trim()
+    ? kind === "expense"
+      ? (row) => String(row?.GROUP_ ?? row?.group_ ?? row?.GROUP ?? row?.group ?? "").trim()
+      : (row) => String(row?.WHOUSE ?? row?.whouse ?? "").trim()
     : kind === "expense"
       ? normalizeType
       : kind === "balance"
@@ -204,42 +219,19 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
             </Link>
             <div className="income-detail-name">{categoryName}</div>
           </div>
-          <div className="income-specode-wrap">
-            <table className="income-specode-table">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th>Rows</th>
-                  <th>TMT</th>
-                  <th>USD</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className={`income-specode-total-row ${!selectedGroup ? "active" : ""}`.trim()}>
-                  <td>
-                    <Link
-                      href={`/${tenantId}/income-statement/details?${buildQuery({
-                        kind,
-                        category,
-                        gymmaty: isGymmatyView ? "1" : "",
-                        code: isAgro ? "" : code,
-                        year,
-                        month,
-                        startDate,
-                        endDate,
-                        limit,
-                        offset: 0
-                      })}`}
-                    >
-                      Totals
-                    </Link>
-                  </td>
-                  <td>{allRows.length}</td>
-                  <td>{money(allRows.reduce((acc, row) => acc + Number(row.LINENET ?? row.linenet ?? 0), 0))}</td>
-                  <td>{money(allRows.reduce((acc, row) => acc + Number(row.REPORTNET ?? row.reportnet ?? 0), 0))}</td>
-                </tr>
-                {groupSummary.map((item) => (
-                  <tr key={item.name} className={selectedGroup === item.name ? "active" : ""}>
+          {isAgro && kind === "expense" ? null : (
+            <div className="income-specode-wrap">
+              <table className="income-specode-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Rows</th>
+                    <th>TMT</th>
+                    <th>USD</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className={`income-specode-total-row ${!selectedGroup ? "active" : ""}`.trim()}>
                     <td>
                       <Link
                         href={`/${tenantId}/income-statement/details?${buildQuery({
@@ -251,23 +243,48 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
                           month,
                           startDate,
                           endDate,
-                          [groupParamKey]:
-                            item.name === `(No ${groupLabel})` ? "" : item.name,
                           limit,
                           offset: 0
                         })}`}
                       >
-                        {item.name}
+                        Totals
                       </Link>
                     </td>
-                    <td>{item.count}</td>
-                    <td>{money(item.tmt)}</td>
-                    <td>{money(item.usd)}</td>
+                    <td>{allRows.length}</td>
+                    <td>{money(allRows.reduce((acc, row) => acc + Number(row.LINENET ?? row.linenet ?? 0), 0))}</td>
+                    <td>{money(allRows.reduce((acc, row) => acc + Number(row.REPORTNET ?? row.reportnet ?? 0), 0))}</td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  {groupSummary.map((item) => (
+                    <tr key={item.name} className={selectedGroup === item.name ? "active" : ""}>
+                      <td>
+                        <Link
+                          href={`/${tenantId}/income-statement/details?${buildQuery({
+                            kind,
+                            category,
+                            gymmaty: isGymmatyView ? "1" : "",
+                            code: isAgro ? "" : code,
+                            year,
+                            month,
+                            startDate,
+                            endDate,
+                            [groupParamKey]:
+                              item.name === `(No ${groupLabel})` ? "" : item.name,
+                            limit,
+                            offset: 0
+                          })}`}
+                        >
+                          {item.name}
+                        </Link>
+                      </td>
+                      <td>{item.count}</td>
+                      <td>{money(item.tmt)}</td>
+                      <td>{money(item.usd)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <table className="income-details-table">
             <thead>
               <tr>
