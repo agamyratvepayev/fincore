@@ -51,3 +51,13 @@ export function queryDebitDetails(params: DetailParams = {}) {
   void params;
   return "EXEC AGRBALDEBDET @CODE = :code, @OFFSET = :offset, @LIMIT = :limit, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
 }
+
+export function queryAdvanceTotals(params: DateParams = {}) {
+  void params;
+  return "EXEC AGRBALADVTOT @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
+export function queryAdvanceDetails(params: DetailParams = {}) {
+  void params;
+  return "EXEC AGRBALADVDET @CODE = :code, @OFFSET = :offset, @LIMIT = :limit, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
