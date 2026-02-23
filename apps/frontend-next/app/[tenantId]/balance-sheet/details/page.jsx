@@ -88,7 +88,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
                   ? "share"
             : "cash";
   const showAmountColumn = kind === "material" || kind === "bio" || kind === "intangible";
-  const category = rawQuery.category ? String(rawQuery.category) : "1";
+  const category = rawQuery.category ? String(rawQuery.category) : rawQuery.code ? String(rawQuery.code) : "1";
   const year = rawQuery.year ? String(rawQuery.year) : "";
   const month = rawQuery.month ? String(rawQuery.month) : "";
   const startDate = rawQuery.startDate ? String(rawQuery.startDate) : "";

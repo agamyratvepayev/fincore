@@ -77,7 +77,7 @@ export async function balanceSheetController(
                           : parseOptionalText((query as Record<string, unknown>).kind) === "share"
                             ? "share"
                             : "cash",
-          category: parseOptionalText(query.category),
+          category: parseOptionalText(query.category ?? query.code),
           offset: parseOptionalNumber(query.offset),
           limit: parseOptionalNumber(query.limit),
           year: parsedYear,
@@ -146,9 +146,16 @@ export async function balanceSheetController(
       try {
         const { tenantId } = request.params as { tenantId: string };
         const query = request.query as ReportQuery & { code?: string };
+        const parsedYear = parseOptionalNumber(query.year);
+        const parsedMonth = parseOptionalNumber(query.month);
+        const shouldIgnoreDates = parsedYear != null || parsedMonth != null;
         return await service.debitTotals(tenantId, {
           from: query.from,
-          to: query.to
+          to: query.to,
+          year: parsedYear,
+          month: parsedMonth,
+          startDate: shouldIgnoreDates ? undefined : parseOptionalText(query.startDate ?? query.startdate),
+          endDate: shouldIgnoreDates ? undefined : parseOptionalText(query.endDate ?? query.enddate)
         });
       } catch (error) {
         return reply.status(400).send({ message: (error as Error).message });

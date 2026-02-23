@@ -5,6 +5,8 @@ import {
   queryCashTotals,
   queryCreditDetails,
   queryCreditTotals,
+  queryDebitDetails,
+  queryDebitTotals,
   queryMaterialDetails,
   queryMaterialTotals
 } from "./balance-sheet.queries.js";
@@ -17,6 +19,7 @@ type DateParams = {
 };
 
 type DetailParams = DateParams & {
+  code?: string;
   category?: string;
   offset?: number;
   limit?: number;
@@ -81,7 +84,7 @@ export class BalanceSheetRepository {
 
   async fetchCreditDetails(overrides?: DetailParams) {
     const params = {
-      code: String(overrides?.category ?? "").trim(),
+      code: String(overrides?.code ?? overrides?.category ?? "").trim(),
       offset: overrides?.offset ?? 0,
       limit: overrides?.limit ?? 50,
       year: overrides?.year,
@@ -90,6 +93,29 @@ export class BalanceSheetRepository {
       endDate: overrides?.endDate
     };
     return executeNamedQuery<Record<string, unknown>>(queryCreditDetails(params), params);
+  }
+
+  async fetchDebitTotals(overrides?: DateParams) {
+    const params = {
+      year: overrides?.year,
+      month: overrides?.month,
+      startDate: overrides?.startDate,
+      endDate: overrides?.endDate
+    };
+    return executeNamedQuery<Record<string, unknown>>(queryDebitTotals(params), params);
+  }
+
+  async fetchDebitDetails(overrides?: DetailParams) {
+    const params = {
+      code: String(overrides?.code ?? overrides?.category ?? "").trim(),
+      offset: overrides?.offset ?? 0,
+      limit: overrides?.limit ?? 50,
+      year: overrides?.year,
+      month: overrides?.month,
+      startDate: overrides?.startDate,
+      endDate: overrides?.endDate
+    };
+    return executeNamedQuery<Record<string, unknown>>(queryDebitDetails(params), params);
   }
 
   async getLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
@@ -149,6 +175,17 @@ export class BalanceSheetRepository {
         endDate: filters?.endDate
       });
     }
+    if (filters?.kind === "debit") {
+      return this.fetchDebitDetails({
+        category: filters?.category,
+        offset: filters?.offset,
+        limit: filters?.limit,
+        year: filters?.year,
+        month: filters?.month,
+        startDate: filters?.startDate,
+        endDate: filters?.endDate
+      });
+    }
     return this.fetchCashDetails({
       category: filters?.category,
       offset: filters?.offset,
@@ -178,6 +215,19 @@ export class BalanceSheetRepository {
     return rows.map((row, index) => ({
       code: String(row.CODE ?? row.code ?? `CREDIT_${index + 1}`),
       label: String(row.DEFINITION_ ?? row.definition_ ?? row.DEFINITION ?? row.definition ?? `Credit ${index + 1}`),
+      amount: Number(row.AMOUNT ?? row.amount ?? 0),
+      lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
+      reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0),
+      group: String(row.GROUP_ ?? row.group_ ?? "BEYLEKILER")
+    }));
+  }
+
+  async getDebitLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
+    void period;
+    const rows = await this.fetchDebitTotals(overrides);
+    return rows.map((row, index) => ({
+      code: String(row.CODE ?? row.code ?? `DEBIT_${index + 1}`),
+      label: String(row.DEFINITION_ ?? row.definition_ ?? row.DEFINITION ?? row.definition ?? `Debit ${index + 1}`),
       amount: Number(row.AMOUNT ?? row.amount ?? 0),
       lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
       reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0),
