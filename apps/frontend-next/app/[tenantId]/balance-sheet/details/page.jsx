@@ -48,11 +48,15 @@ function normalizeType(row) {
 }
 
 function detailTmtValue(row, kind) {
+  if (kind === "cash") return Number(row.OUTCOST ?? row.outcost ?? row.AMOUNT ?? row.amount ?? 0);
   if (kind === "material" || kind === "bio" || kind === "intangible") return Number(row.OUTCOST ?? row.outcost ?? 0);
   return Number(row.AMOUNT ?? row.amount ?? row.OUTCOST ?? row.outcost ?? 0);
 }
 
 function detailUsdValue(row, kind) {
+  if (kind === "cash") {
+    return Number(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? row.REPORTNET ?? row.reportnet ?? 0);
+  }
   if (kind === "material" || kind === "bio" || kind === "intangible") {
     return Number(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0);
   }

@@ -35,6 +35,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
   const { tenantId } = await params;
   const tenant = resolveTenant(tenantId);
   if (!tenant) notFound();
+  const isAgro = tenant.id === "agro";
 
   const rawQuery = (await searchParams) ?? {};
   const year = rawQuery.year ? String(rawQuery.year) : "";
@@ -81,36 +82,44 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
       startDate: startDate || undefined,
       endDate: endDate || undefined
     }),
-    fetchBalanceBioTotals(tenantId, {
-      year: year || undefined,
-      month: month || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined
-    }),
-    fetchBalanceLoanTotals(tenantId, {
-      year: year || undefined,
-      month: month || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined
-    }),
+    isAgro
+      ? Promise.resolve({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] })
+      : fetchBalanceBioTotals(tenantId, {
+          year: year || undefined,
+          month: month || undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined
+        }),
+    isAgro
+      ? Promise.resolve({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] })
+      : fetchBalanceLoanTotals(tenantId, {
+          year: year || undefined,
+          month: month || undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined
+        }),
     fetchBalanceAdvanceTotals(tenantId, {
       year: year || undefined,
       month: month || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined
     }),
-    fetchBalanceIntangibleTotals(tenantId, {
-      year: year || undefined,
-      month: month || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined
-    }),
-    fetchBalanceShareTotals(tenantId, {
-      year: year || undefined,
-      month: month || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined
-    }).catch(() => ({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] }))
+    isAgro
+      ? Promise.resolve({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] })
+      : fetchBalanceIntangibleTotals(tenantId, {
+          year: year || undefined,
+          month: month || undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined
+        }),
+    isAgro
+      ? Promise.resolve({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] })
+      : fetchBalanceShareTotals(tenantId, {
+          year: year || undefined,
+          month: month || undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined
+        }).catch(() => ({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] }))
   ]);
 
   const rows = Array.isArray(totalsData?.lines) ? totalsData.lines : [];
@@ -365,7 +374,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                       ))
                     : null}
 
-                  <tr className="income-main-total-row balance-category-row">
+                  {!isAgro ? <tr className="income-main-total-row balance-category-row">
                     <td style={{ textAlign: "left" }}>
                       <Link
                         href={`/${tenantId}/balance-sheet?${buildQuery({
@@ -395,9 +404,9 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                     </td>
                     <td>{money(bioTotalTmt)}</td>
                     <td>{money(bioTotalUsd)}</td>
-                  </tr>
+                  </tr> : null}
 
-                  {expandBio
+                  {!isAgro && expandBio
                     ? bioRows.map((row, idx) => (
                         <tr key={`bio-${idx}`} className="income-category-row balance-name-row">
                           <td style={{ textAlign: "left" }}>
@@ -421,7 +430,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                       ))
                     : null}
 
-                  <tr className="income-main-total-row balance-category-row">
+                  {!isAgro ? <tr className="income-main-total-row balance-category-row">
                     <td style={{ textAlign: "left" }}>
                       <Link
                         href={`/${tenantId}/balance-sheet?${buildQuery({
@@ -451,9 +460,9 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                     </td>
                     <td>{money(loanTotalTmt)}</td>
                     <td>{money(loanTotalUsd)}</td>
-                  </tr>
+                  </tr> : null}
 
-                  {expandLoan
+                  {!isAgro && expandLoan
                     ? loanRows.map((row, idx) => (
                         <tr key={`loan-${idx}`} className="income-category-row balance-name-row">
                           <td style={{ textAlign: "left" }}>
@@ -533,7 +542,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                       ))
                     : null}
 
-                  <tr className="income-main-total-row balance-category-row">
+                  {!isAgro ? <tr className="income-main-total-row balance-category-row">
                     <td style={{ textAlign: "left" }}>
                       <Link
                         href={`/${tenantId}/balance-sheet?${buildQuery({
@@ -563,9 +572,9 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                     </td>
                     <td>{money(intangibleTotalTmt)}</td>
                     <td>{money(intangibleTotalUsd)}</td>
-                  </tr>
+                  </tr> : null}
 
-                  {expandIntangible
+                  {!isAgro && expandIntangible
                     ? intangibleRows.map((row, idx) => (
                         <tr key={`intangible-${idx}`} className="income-category-row balance-name-row">
                           <td style={{ textAlign: "left" }}>
@@ -775,7 +784,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                       ))
                     : null}
 
-                  <tr className="income-main-total-row balance-category-row">
+                  {!isAgro ? <tr className="income-main-total-row balance-category-row">
                     <td style={{ textAlign: "left" }}>
                       <Link
                         href={`/${tenantId}/balance-sheet?${buildQuery({
@@ -805,9 +814,9 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                     </td>
                     <td>{money(shareTotalTmt)}</td>
                     <td>{money(shareTotalUsd)}</td>
-                  </tr>
+                  </tr> : null}
 
-                  {expandShare
+                  {!isAgro && expandShare
                     ? shareGroups.map((group) => (
                         <Fragment key={`share-group-wrap-${group.name}`}>
                           <tr key={`share-group-${group.name}`} className="row-expense balance-group-row">
