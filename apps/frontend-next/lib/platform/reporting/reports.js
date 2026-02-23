@@ -19,6 +19,12 @@ const TENANT_REPORTS = {
       slug: "income-statement",
       label: "Peyda Hasabaty",
       description: "Income Statement"
+    },
+    {
+      id: "balance-sheet",
+      slug: "balance-sheet",
+      label: "Balans Hasabaty",
+      description: "Balance Sheet"
     }
   ]
 };

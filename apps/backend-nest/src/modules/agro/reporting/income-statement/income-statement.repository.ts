@@ -96,7 +96,9 @@ export class IncomeStatementRepository {
     };
     try {
       return await executeNamedQuery<Record<string, unknown>>(queryExpenseDetails(params), params);
-    } catch {
+    } catch (error) {
+      const message = String((error as Error)?.message ?? "");
+      if (!/converting data type varchar to float/i.test(message)) throw error;
       return executeNamedQuery<Record<string, unknown>>(queryExpenseDetailsFallback(params), params);
     }
   }

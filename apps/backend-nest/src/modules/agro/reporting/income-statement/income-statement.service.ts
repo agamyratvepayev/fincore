@@ -180,8 +180,8 @@ export class IncomeStatementService {
       kind === "expense"
         ? await this.repository.getExpenseDetails({
             id: validId,
-            offset,
-            limit,
+            offset: offset ?? 0,
+            limit: limit ?? 50,
             year,
             month,
             startDate,

@@ -1,4 +1,5 @@
 import { BalanceSheetService } from "../../../modules/gurlusyk/reporting/balance-sheet/balance-sheet.service.js";
+import { BalanceSheetService as AgroBalanceSheetService } from "../../../modules/agro/reporting/balance-sheet/balance-sheet.service.js";
 import { IncomeStatementService as AgroIncomeStatementService } from "../../../modules/agro/reporting/income-statement/income-statement.service.js";
 import { IncomeStatementService } from "../../../modules/gurlusyk/reporting/income-statement/income-statement.service.js";
 import type { TenantReportingProvider } from "../contracts/report.interface.js";
@@ -17,7 +18,7 @@ const providers = new Map<string, TenantReportingProvider>([
     {
       tenantId: "agro",
       income: new AgroIncomeStatementService(),
-      balance: new BalanceSheetService()
+      balance: new AgroBalanceSheetService()
     }
   ]
 ]);

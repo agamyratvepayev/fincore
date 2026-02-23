@@ -32,7 +32,7 @@ export function queryRevenueDetails(filters: DetailParams = {}) {
 
 export function queryExpenseDetails(filters: DetailParams = {}) {
   void filters;
-  return "EXEC AGRINCEXPDET @ID = :id, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+  return "EXEC AGRINCEXPDET @ID = :id, @OFFSET = :offset, @LIMIT = :limit, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
 }
 
 export function queryExpenseDetailsFallback(filters: DetailParams = {}) {
@@ -41,6 +41,7 @@ export function queryExpenseDetailsFallback(filters: DetailParams = {}) {
     ;WITH CTE AS (
       SELECT
         SRC.DEFINITION_ AS CATEGORY,
+        'ALINAN HIZMET' AS GROUP_,
         STL.DATE_,
         CLC.DEFINITION_,
         STL.LINEEXP,
@@ -61,6 +62,7 @@ export function queryExpenseDetailsFallback(filters: DetailParams = {}) {
 
       SELECT
         'SKIDKA' AS CATEGORY,
+        CASE WHEN CFL.TRCODE = 3 THEN 'BORC DEKONT' ELSE 'ALACAK DEKONT' END AS GROUP_,
         CFL.DATE_,
         CLC.DEFINITION_,
         CFL.LINEEXP,
@@ -85,6 +87,13 @@ export function queryExpenseDetailsFallback(filters: DetailParams = {}) {
           WHEN STL.TRCODE = 12 THEN 'ULANYLAN'
           WHEN STL.TRCODE = 13 THEN 'ONDURILEN'
         END AS CATEGORY,
+        CASE
+          WHEN STL.TRCODE = 11 THEN 'FIRE FISI'
+          WHEN STL.TRCODE = 12 THEN 'SARF FISI'
+          WHEN STL.TRCODE = 50 THEN 'SAYIM FAZLA,'
+          WHEN STL.TRCODE = 51 THEN 'SAYIM EKSIK'
+          WHEN STL.TRCODE = 13 THEN 'URETIM GIRIS'
+        END AS GROUP_,
         STL.DATE_,
         ITM.NAME AS DEFINITION_,
         STL.LINEEXP,
@@ -109,14 +118,12 @@ export function queryExpenseDetailsFallback(filters: DetailParams = {}) {
         AND MONTH(STL.DATE_) = ISNULL(:month, MONTH(STL.DATE_))
         AND STL.DATE_ BETWEEN ISNULL(:startDate, '1900-01-01') AND ISNULL(:endDate, '2115-01-01')
     ),
-    Ranked AS (
-      SELECT
-        DENSE_RANK() OVER (ORDER BY CATEGORY) AS RN,
-        *
+    RankedResults AS (
+      SELECT DENSE_RANK() OVER (ORDER BY CATEGORY) AS RN, *
       FROM CTE
     )
     SELECT *
-    FROM Ranked
+    FROM RankedResults
     WHERE RN = ISNULL(:id, RN)
     ORDER BY DATE_ DESC
     OFFSET ISNULL(:offset, 0) ROWS

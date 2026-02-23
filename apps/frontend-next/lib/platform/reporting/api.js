@@ -2,6 +2,16 @@ function backendBaseUrl() {
   return process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:4100";
 }
 
+async function responseErrorMessage(response) {
+  try {
+    const data = await response.json();
+    const message = String(data?.message ?? "").trim();
+    return message || `HTTP ${response.status}`;
+  } catch {
+    return `HTTP ${response.status}`;
+  }
+}
+
 function withQuery(path, query = {}) {
   const url = new URL(path, backendBaseUrl());
   Object.entries(query).forEach(([key, value]) => {
@@ -48,7 +58,10 @@ export async function fetchIncomeDetails(tenantId, kind, filters = {}) {
   delete retryFilters.limit;
   const retryUrl = withQuery(`/tenants/${tenantId}/reports/income-statement/details`, retryFilters);
   const retryResponse = await fetch(retryUrl, { cache: "no-store" });
-  if (!retryResponse.ok) throw new Error(`Failed to load ${kindValue} details (${retryResponse.status})`);
+  if (!retryResponse.ok) {
+    const message = await responseErrorMessage(retryResponse);
+    throw new Error(`Failed to load ${kindValue} details (${retryResponse.status}): ${message}`);
+  }
   return retryResponse.json();
 }
 
