@@ -15,6 +15,11 @@ function toNumber(value, fallback) {
   return Number.isFinite(num) ? num : fallback;
 }
 
+function toCategoryId(value, fallback) {
+  const text = String(value ?? "").trim();
+  return text || String(fallback);
+}
+
 function buildQuery(params) {
   const qs = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -36,37 +41,42 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
   if (!tenant) notFound();
 
   const rawQuery = (await searchParams) ?? {};
+  const isAgro = tenantId === "agro";
   const defaultClientCode = "120.05.001";
   const year = rawQuery.year ? String(rawQuery.year) : "";
   const month = rawQuery.month ? String(rawQuery.month) : "";
   const startDate = rawQuery.startDate ? String(rawQuery.startDate) : "";
   const endDate = rawQuery.endDate ? String(rawQuery.endDate) : "";
-  const code = rawQuery.code ? String(rawQuery.code) : defaultClientCode;
+  const code = isAgro ? "" : rawQuery.code ? String(rawQuery.code) : defaultClientCode;
 
   const [dateFilterData, clientsData, revenueData, expenseData, balanceData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
-    fetchIncomeClients(tenantId).catch(() => []),
+    isAgro ? Promise.resolve([]) : fetchIncomeClients(tenantId).catch(() => []),
     fetchIncomeRevenueTotals(tenantId, {
-      code: code || undefined,
+      code: isAgro ? undefined : code || undefined,
       year: year || undefined,
       month: month || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined
     }),
-    fetchIncomeExpenseTotals(tenantId, {
-      code: code || undefined,
-      year: year || undefined,
-      month: month || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined
-    }),
-    fetchIncomeBalanceTotals(tenantId, {
-      code: code || undefined,
-      year: year || undefined,
-      month: month || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined
-    })
+    isAgro
+      ? Promise.resolve({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] })
+      : fetchIncomeExpenseTotals(tenantId, {
+          code: code || undefined,
+          year: year || undefined,
+          month: month || undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined
+        }),
+    isAgro
+      ? Promise.resolve({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] })
+      : fetchIncomeBalanceTotals(tenantId, {
+          code: code || undefined,
+          year: year || undefined,
+          month: month || undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined
+        })
   ]);
 
   const revenueCategories = Array.isArray(revenueData?.categories) ? revenueData.categories : [];
@@ -83,10 +93,9 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
   const years = Array.isArray(dateFilterData?.years) ? dateFilterData.years : [];
   const months = Array.isArray(dateFilterData?.months) ? dateFilterData.months : [];
   const clients = Array.isArray(clientsData) ? clientsData : [];
-  const selectedClient =
-    clients.find((client) => String(client.code ?? "").trim() === code) ?? null;
+  const selectedClient = clients.find((client) => String(client.code ?? "").trim() === code) ?? null;
   const selectedClientName = String(
-    selectedClient?.name ?? selectedClient?.code ?? code
+    selectedClient?.name ?? selectedClient?.code ?? (isAgro ? "AGRO" : code)
   ).trim();
 
   return (
@@ -119,11 +128,13 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
                     <td>{money(revenueTotalUsd)}</td>
                   </tr>
                   {revenueCategories.map((row, idx) => {
-                    const id = toNumber(row.id, idx + 1);
+                    const id = isAgro ? toCategoryId(row.id ?? row.name, idx + 1) : toNumber(row.id, idx + 1);
+                    const isGymmatyRow = isAgro && String(row.id ?? "").toUpperCase() === "GYMMATY";
                     const detailsQuery = buildQuery({
                       kind: "revenue",
-                      category: id,
-                      code,
+                      category: isGymmatyRow ? "2" : id,
+                      gymmaty: isGymmatyRow ? "1" : "",
+                      code: isAgro ? "" : code,
                       year,
                       month,
                       startDate,
@@ -142,101 +153,107 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
                       </tr>
                     );
                   })}
-                  <tr className="row-expense">
-                    <td style={{ textAlign: "left" }}>Cykdajy</td>
-                    <td>{money(expenseTotalTmt)}</td>
-                    <td>{money(expenseTotalUsd)}</td>
-                  </tr>
-                  {expenseCategories.map((row, idx) => {
-                    const id = toNumber(row.id, idx + 1);
-                    const detailsQuery = buildQuery({
-                      kind: "expense",
-                      category: id,
-                      code,
-                      year,
-                      month,
-                      startDate,
-                      endDate
-                    });
-                    return (
-                      <tr key={`expense-${id}-${idx}`} className="income-category-row">
-                        <td style={{ textAlign: "left" }}>
-                          <Link href={`/${tenantId}/income-statement/details?${detailsQuery}`} className="income-category-link">
-                            <span className="dot red"></span>
-                            {row.name || "-"}
-                          </Link>
-                        </td>
-                        <td>{money(row.lineNet)}</td>
-                        <td>{money(row.reportNet)}</td>
+                  {isAgro ? null : (
+                    <>
+                      <tr className="row-expense">
+                        <td style={{ textAlign: "left" }}>Cykdajy</td>
+                        <td>{money(expenseTotalTmt)}</td>
+                        <td>{money(expenseTotalUsd)}</td>
                       </tr>
-                    );
-                  })}
-                  <tr className="row-profit">
-                    <td style={{ textAlign: "left" }}>Peyda</td>
-                    <td>{money(profitTotalTmt)}</td>
-                    <td>{money(profitTotalUsd)}</td>
-                  </tr>
+                      {expenseCategories.map((row, idx) => {
+                        const id = toNumber(row.id, idx + 1);
+                        const detailsQuery = buildQuery({
+                          kind: "expense",
+                          category: id,
+                          code,
+                          year,
+                          month,
+                          startDate,
+                          endDate
+                        });
+                        return (
+                          <tr key={`expense-${id}-${idx}`} className="income-category-row">
+                            <td style={{ textAlign: "left" }}>
+                              <Link href={`/${tenantId}/income-statement/details?${detailsQuery}`} className="income-category-link">
+                                <span className="dot red"></span>
+                                {row.name || "-"}
+                              </Link>
+                            </td>
+                            <td>{money(row.lineNet)}</td>
+                            <td>{money(row.reportNet)}</td>
+                          </tr>
+                        );
+                      })}
+                      <tr className="row-profit">
+                        <td style={{ textAlign: "left" }}>Peyda</td>
+                        <td>{money(profitTotalTmt)}</td>
+                        <td>{money(profitTotalUsd)}</td>
+                      </tr>
+                    </>
+                  )}
                 </>
               )}
             </tbody>
           </table>
         </div>
 
-        <div className="panel income-panel" style={{ marginTop: 16 }}>
-          <div className="panel-title income-panel-title">
-            <div className="income-title-client">ALGY-BERGI</div>
-          </div>
-          <table className="income-table">
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left" }}></th>
-                <th>TMT</th>
-                <th>USD</th>
-              </tr>
-            </thead>
-            <tbody>
-              {balanceCategories.length === 0 ? (
+        {isAgro ? null : (
+          <div className="panel income-panel" style={{ marginTop: 16 }}>
+            <div className="panel-title income-panel-title">
+              <div className="income-title-client">ALGY-BERGI</div>
+            </div>
+            <table className="income-table">
+              <thead>
                 <tr>
-                  <td colSpan={3} style={{ textAlign: "center", color: "#64748b" }}>
-                    No balance data
-                  </td>
+                  <th style={{ textAlign: "left" }}></th>
+                  <th>TMT</th>
+                  <th>USD</th>
                 </tr>
-              ) : (
-                <>
-                  <tr className="income-main-total-row">
-                    <td style={{ textAlign: "left" }}>Total Balance</td>
-                    <td>{money(balanceTotalTmt)}</td>
-                    <td>{money(balanceTotalUsd)}</td>
+              </thead>
+              <tbody>
+                {balanceCategories.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} style={{ textAlign: "center", color: "#64748b" }}>
+                      No balance data
+                    </td>
                   </tr>
-                  {balanceCategories.map((row, idx) => {
-                    const id = toNumber(row.id, idx + 1);
-                    const detailsQuery = buildQuery({
-                      kind: "balance",
-                      category: id,
-                      code,
-                      year,
-                      month,
-                      startDate,
-                      endDate
-                    });
-                    return (
-                      <tr key={`balance-${id}-${idx}`} className="income-category-row">
-                        <td style={{ textAlign: "left" }}>
-                          <Link href={`/${tenantId}/income-statement/details?${detailsQuery}`} className="income-category-link">
-                            <span className="dot yellow"></span>
-                            {row.name || "-"}
-                          </Link>
-                        </td>
-                        <td>{money(row.lineNet)}</td>
-                        <td>{money(row.reportNet)}</td>
-                      </tr>
-                    );
-                  })}
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  <>
+                    <tr className="income-main-total-row">
+                      <td style={{ textAlign: "left" }}>Total Balance</td>
+                      <td>{money(balanceTotalTmt)}</td>
+                      <td>{money(balanceTotalUsd)}</td>
+                    </tr>
+                    {balanceCategories.map((row, idx) => {
+                      const id = toNumber(row.id, idx + 1);
+                      const detailsQuery = buildQuery({
+                        kind: "balance",
+                        category: id,
+                        code,
+                        year,
+                        month,
+                        startDate,
+                        endDate
+                      });
+                      return (
+                        <tr key={`balance-${id}-${idx}`} className="income-category-row">
+                          <td style={{ textAlign: "left" }}>
+                            <Link href={`/${tenantId}/income-statement/details?${detailsQuery}`} className="income-category-link">
+                              <span className="dot yellow"></span>
+                              {row.name || "-"}
+                            </Link>
+                          </td>
+                          <td>{money(row.lineNet)}</td>
+                          <td>{money(row.reportNet)}</td>
+                        </tr>
+                      );
+                    })}
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <IncomeFiltersCard
@@ -249,6 +266,7 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
         clients={clients}
         months={months}
         years={years}
+        showClient={!isAgro}
       />
     </div>
   );

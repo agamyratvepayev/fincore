@@ -57,16 +57,24 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
   if (!tenant) notFound();
 
   const rawQuery = (await searchParams) ?? {};
+  const isAgro = tenantId === "agro";
   const defaultClientCode = "120.05.001";
   const kind = rawQuery.kind === "expense" ? "expense" : rawQuery.kind === "balance" ? "balance" : "revenue";
-  const category = rawQuery.category ? String(rawQuery.category) : "1";
-  const code = rawQuery.code ? String(rawQuery.code) : defaultClientCode;
+  const rawCategory = rawQuery.category ? String(rawQuery.category) : isAgro ? "2" : "1";
+  const isGymmatyView = isAgro && (String(rawQuery.gymmaty ?? "") === "1" || rawCategory.toUpperCase() === "GYMMATY");
+  const category = isAgro ? (rawCategory === "1" ? "1" : "2") : rawCategory;
+  const code = isAgro ? "" : rawQuery.code ? String(rawQuery.code) : defaultClientCode;
   const year = rawQuery.year ? String(rawQuery.year) : "";
   const month = rawQuery.month ? String(rawQuery.month) : "";
   const startDate = rawQuery.startDate ? String(rawQuery.startDate) : "";
   const endDate = rawQuery.endDate ? String(rawQuery.endDate) : "";
+  const groupParamKey = isAgro ? "whouse" : kind === "expense" || kind === "balance" ? "type" : "specode";
   const selectedGroup =
-    kind === "expense"
+    isAgro
+      ? rawQuery.whouse
+        ? String(rawQuery.whouse).trim()
+        : ""
+      : kind === "expense"
       ? rawQuery.type
         ? String(rawQuery.type).trim()
         : ""
@@ -82,10 +90,10 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
 
   const [dateFilterData, clientsData, detailsData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
-    fetchIncomeClients(tenantId).catch(() => []),
+    isAgro ? Promise.resolve([]) : fetchIncomeClients(tenantId).catch(() => []),
     fetchIncomeDetails(tenantId, kind, {
       category,
-      code: code || undefined,
+      code: isAgro ? undefined : code || undefined,
       year: year || undefined,
       month: month || undefined,
       startDate: startDate || undefined,
@@ -93,16 +101,44 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
     })
   ]);
 
-  const allRows = Array.isArray(detailsData?.rows) ? detailsData.rows : [];
+  const allRowsRaw = Array.isArray(detailsData?.rows) ? detailsData.rows : [];
+  const allRows = isGymmatyView
+    ? allRowsRaw.map((row) => ({
+        ...row,
+        CATEGORY: "GYMMATY",
+        LINENET: -Number(row.OUTCOST ?? row.outcost ?? 0),
+        REPORTNET: -Number(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0)
+      }))
+    : allRowsRaw;
+  const defaultCategoryName = isAgro
+    ? isGymmatyView
+      ? "Gymmaty"
+      : category === "1"
+        ? "Hyzmatlar"
+        : "Satyslar"
+    : category === "1"
+      ? "Edilen is F2"
+      : category === "2"
+        ? "Konwertasiya"
+        : category === "3"
+          ? "Beylekiler"
+          : `Category ${category}`;
   const categoryName = String(
-    allRows[0]?.CATEGORY ??
+      allRows[0]?.CATEGORY ??
       allRows[0]?.NAME ??
       allRows[0]?.ADDR1 ??
+      allRows[0]?.DEFINITION_ ??
       allRows[0]?.name ??
-      (category === "1" ? "Edilen is F2" : category === "2" ? "Konwertasiya" : category === "3" ? "Beylekiler" : `Category ${category}`)
+      defaultCategoryName
   ).trim();
-  const groupLabel = kind === "expense" ? "Type" : kind === "balance" ? "Type" : "Specode";
-  const normalizeGroup = kind === "expense" ? normalizeType : kind === "balance" ? normalizeBalanceGroup : normalizeSpecode;
+  const groupLabel = isAgro ? "Whouse" : kind === "expense" ? "Type" : kind === "balance" ? "Type" : "Specode";
+  const normalizeGroup = isAgro
+    ? (row) => String(row?.WHOUSE ?? row?.whouse ?? "").trim()
+    : kind === "expense"
+      ? normalizeType
+      : kind === "balance"
+        ? normalizeBalanceGroup
+        : normalizeSpecode;
   const groupFilteredRows = selectedGroup
     ? allRows.filter((row) => normalizeGroup(row) === selectedGroup)
     : allRows;
@@ -112,28 +148,30 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
   const years = Array.isArray(dateFilterData?.years) ? dateFilterData.years : [];
   const months = Array.isArray(dateFilterData?.months) ? dateFilterData.months : [];
   const clients = Array.isArray(clientsData) ? clientsData : [];
-  const backQuery = buildQuery({ code, year, month, startDate, endDate });
+  const backQuery = buildQuery({ code: isAgro ? "" : code, year, month, startDate, endDate });
   const prevQuery = buildQuery({
     kind,
     category,
-    code,
+    gymmaty: isGymmatyView ? "1" : "",
+    code: isAgro ? "" : code,
     year,
     month,
     startDate,
     endDate,
-    [kind === "expense" || kind === "balance" ? "type" : "specode"]: selectedGroup,
+    [groupParamKey]: selectedGroup,
     limit,
     offset: Math.max(0, offset - limit)
   });
   const nextQuery = buildQuery({
     kind,
     category,
-    code,
+    gymmaty: isGymmatyView ? "1" : "",
+    code: isAgro ? "" : code,
     year,
     month,
     startDate,
     endDate,
-    [kind === "expense" || kind === "balance" ? "type" : "specode"]: selectedGroup,
+    [groupParamKey]: selectedGroup,
     limit,
     offset: offset + limit
   });
@@ -150,7 +188,11 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
   const groupSummary = Array.from(groupSummaryMap.entries())
     .map(([name, value]) => ({ name, tmt: value.tmt, usd: value.usd, count: value.count }))
     .sort((a, b) => b.tmt - a.tmt);
-  const showNameAmountColumns = allRows.some((row) => text(row.ADDR1 ?? row.addr1) && text(row.AMOUNT ?? row.amount));
+  const showNameAmountColumns = allRows.some((row) =>
+    isAgro
+      ? text(row.DEFINITION_ ?? row.definition_) && text(row.AMOUNT ?? row.amount)
+      : text(row.ADDR1 ?? row.addr1) && text(row.AMOUNT ?? row.amount)
+  );
 
   return (
     <div className="layout-grid income-layout-grid income-details-layout income-details-expanded">
@@ -179,7 +221,8 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
                       href={`/${tenantId}/income-statement/details?${buildQuery({
                         kind,
                         category,
-                        code,
+                        gymmaty: isGymmatyView ? "1" : "",
+                        code: isAgro ? "" : code,
                         year,
                         month,
                         startDate,
@@ -202,12 +245,13 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
                         href={`/${tenantId}/income-statement/details?${buildQuery({
                           kind,
                           category,
-                          code,
+                          gymmaty: isGymmatyView ? "1" : "",
+                          code: isAgro ? "" : code,
                           year,
                           month,
                           startDate,
                           endDate,
-                          [kind === "expense" || kind === "balance" ? "type" : "specode"]:
+                          [groupParamKey]:
                             item.name === `(No ${groupLabel})` ? "" : item.name,
                           limit,
                           offset: 0
@@ -246,9 +290,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
               ) : (
                 rows.map((row, idx) => {
                   const amountText = text(row.AMOUNT ?? row.amount);
-                  const nameText = amountText
-                    ? String(row.ITEMNAME ?? row.itemname ?? "")
-                    : "";
+                  const nameText = amountText ? String(row.DEFINITION_ ?? row.definition_ ?? row.ITEMNAME ?? row.itemname ?? "") : "";
                   const groupValue = normalizeGroup(row) || "-";
                   return (
                     <tr key={`row-${idx}`}>
@@ -316,8 +358,10 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
         limit={limit}
         extraParams={{
           kind,
-          [kind === "expense" || kind === "balance" ? "type" : "specode"]: selectedGroup
+          gymmaty: isGymmatyView ? "1" : "",
+          [groupParamKey]: selectedGroup
         }}
+        showClient={!isAgro}
       />
     </div>
   );

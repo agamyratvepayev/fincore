@@ -19,28 +19,32 @@ type DateParams = {
 };
 
 type DetailParams = DateParams & {
-  category?: number;
+  category?: number | string;
   offset?: number;
   limit?: number;
 };
 
 export type RevenueTotalRow = {
-  id: number;
+  id: number | string;
   name: string;
   lineNet: number;
   reportNet: number;
+  outCost?: number;
+  outCostCurr?: number;
+  disableDetails?: boolean;
 };
 
 export class IncomeStatementRepository {
-  async getDateFilters() {
-    return executeNamedQuery<Record<string, unknown>>(queryDateFilters());
+  async getDateFilters(tenantId: string) {
+    return executeNamedQuery<Record<string, unknown>>(queryDateFilters(tenantId));
   }
 
-  async getClientNames() {
-    return executeNamedQuery<Record<string, unknown>>(queryClientNames());
+  async getClientNames(tenantId: string) {
+    return executeNamedQuery<Record<string, unknown>>(queryClientNames(tenantId));
   }
 
   async getRevenueTotals(
+    tenantId: string,
     period: ReportPeriod,
     overrides?: DateParams,
     clientCode?: string
@@ -54,17 +58,20 @@ export class IncomeStatementRepository {
       endDate: overrides?.endDate
     };
 
-    const rows = await executeNamedQuery<Record<string, unknown>>(queryRevenueTotals(params), params);
+    const rows = await executeNamedQuery<Record<string, unknown>>(queryRevenueTotals(tenantId, params), params);
 
     return rows.map((row) => ({
-      id: Number(row.ID ?? 0),
-      name: String(row.NAME ?? row.ADDR1 ?? ""),
+      id: isAgroTenant(tenantId) ? String(row.CATEGORY ?? row.NAME ?? "") : Number(row.ID ?? 0),
+      name: String(row.NAME ?? row.ADDR1 ?? row.CATEGORY ?? ""),
       lineNet: Number(row.LINENET ?? 0),
-      reportNet: Number(row.REPORTNET ?? 0)
+      reportNet: Number(row.REPORTNET ?? 0),
+      outCost: Number(row.OUTCOST ?? 0),
+      outCostCurr: Number(row.OUTCOSTCURR ?? row.OUTCOSTCUR ?? 0)
     }));
   }
 
   async getExpenseTotals(
+    tenantId: string,
     period: ReportPeriod,
     overrides?: DateParams,
     clientCode?: string
@@ -78,7 +85,8 @@ export class IncomeStatementRepository {
       endDate: overrides?.endDate
     };
 
-    const rows = await executeNamedQuery<Record<string, unknown>>(queryExpenseTotals(params), params);
+    if (isAgroTenant(tenantId)) return [];
+    const rows = await executeNamedQuery<Record<string, unknown>>(queryExpenseTotals(tenantId, params), params);
 
     return rows.map((row) => ({
       id: Number(row.ID ?? 0),
@@ -89,6 +97,7 @@ export class IncomeStatementRepository {
   }
 
   async getBalanceTotals(
+    tenantId: string,
     period: ReportPeriod,
     overrides?: DateParams,
     clientCode?: string
@@ -102,7 +111,8 @@ export class IncomeStatementRepository {
       endDate: overrides?.endDate
     };
 
-    const rows = await executeNamedQuery<Record<string, unknown>>(queryBalanceTotals(params), params);
+    if (isAgroTenant(tenantId)) return [];
+    const rows = await executeNamedQuery<Record<string, unknown>>(queryBalanceTotals(tenantId, params), params);
 
     return rows.map((row) => ({
       id: Number(row.ID ?? 0),
@@ -113,6 +123,7 @@ export class IncomeStatementRepository {
   }
 
   async getRevenueDetails(
+    tenantId: string,
     period: ReportPeriod,
     detail?: DetailParams,
     clientCode?: string
@@ -129,10 +140,11 @@ export class IncomeStatementRepository {
       endDate: detail?.endDate
     };
 
-    return executeNamedQuery<Record<string, unknown>>(queryRevenueDetails(params), params);
+    return executeNamedQuery<Record<string, unknown>>(queryRevenueDetails(tenantId, params), params);
   }
 
   async getExpenseDetails(
+    tenantId: string,
     period: ReportPeriod,
     detail?: DetailParams,
     clientCode?: string
@@ -149,10 +161,12 @@ export class IncomeStatementRepository {
       endDate: detail?.endDate
     };
 
-    return executeNamedQuery<Record<string, unknown>>(queryExpenseDetails(params), params);
+    if (isAgroTenant(tenantId)) return [];
+    return executeNamedQuery<Record<string, unknown>>(queryExpenseDetails(tenantId, params), params);
   }
 
   async getBalanceDetails(
+    tenantId: string,
     period: ReportPeriod,
     detail?: DetailParams,
     clientCode?: string
@@ -169,6 +183,11 @@ export class IncomeStatementRepository {
       endDate: detail?.endDate
     };
 
-    return executeNamedQuery<Record<string, unknown>>(queryBalanceDetails(params), params);
+    if (isAgroTenant(tenantId)) return [];
+    return executeNamedQuery<Record<string, unknown>>(queryBalanceDetails(tenantId, params), params);
   }
+}
+
+function isAgroTenant(tenantId: string) {
+  return String(tenantId).toLowerCase() === "agro";
 }

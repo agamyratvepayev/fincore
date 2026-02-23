@@ -9,7 +9,7 @@ export class IncomeStatementService {
   async execute(tenantId: string, from?: string, to?: string): Promise<ReportResponse> {
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(from, to);
-    const rows = await this.repository.getRevenueTotals(period, undefined, getDefaultClientCode(tenantId));
+    const rows = await this.repository.getRevenueTotals(tenantId, period, undefined, getDefaultClientCode(tenantId));
 
     const revenueAmount = rows.reduce((acc, row) => acc + row.lineNet, 0);
 
@@ -25,7 +25,7 @@ export class IncomeStatementService {
 
   async dateFilters(tenantId: string) {
     await ensureReportingTenantReady(tenantId);
-    const rows = await this.repository.getDateFilters();
+    const rows = await this.repository.getDateFilters(tenantId);
 
     const dates = rows
       .map((row) => {
@@ -51,7 +51,8 @@ export class IncomeStatementService {
 
   async clients(tenantId: string) {
     await ensureReportingTenantReady(tenantId);
-    const rows = await this.repository.getClientNames();
+    if (isAgroTenant(tenantId)) return [];
+    const rows = await this.repository.getClientNames(tenantId);
     return rows
       .map((row) => {
         const values = Object.values(row)
@@ -99,6 +100,7 @@ export class IncomeStatementService {
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(filters?.from, filters?.to);
     const rows = await this.repository.getRevenueTotals(
+      tenantId,
       period,
       {
         year: filters?.year,
@@ -108,6 +110,40 @@ export class IncomeStatementService {
       },
       filters?.client || getDefaultClientCode(tenantId)
     );
+
+    if (isAgroTenant(tenantId)) {
+      const satyslar = rows.find((row) => String(row.name).toUpperCase() === "SATYSLAR");
+      const hyzmatlar = rows.find((row) => String(row.name).toUpperCase() === "HYZMATLAR");
+
+      const satyslarLineNet = Number(satyslar?.lineNet ?? 0);
+      const satyslarReportNet = Number(satyslar?.reportNet ?? 0);
+      const gymmatyLineNet = -Number(satyslar?.outCost ?? 0);
+      const gymmatyReportNet = -Number(satyslar?.outCostCurr ?? 0);
+      const hyzmatlarLineNet = Number(hyzmatlar?.lineNet ?? 0);
+      const hyzmatlarReportNet = Number(hyzmatlar?.reportNet ?? 0);
+
+      const agroCategories = [
+        { id: 0, name: "Satyslar", lineNet: satyslarLineNet, reportNet: satyslarReportNet },
+        {
+          id: "GYMMATY",
+          name: "Gymmaty",
+          lineNet: gymmatyLineNet,
+          reportNet: gymmatyReportNet,
+          disableDetails: true
+        },
+        { id: 4, name: "Hyzmatlar", lineNet: hyzmatlarLineNet, reportNet: hyzmatlarReportNet }
+      ];
+      return {
+        tenantId,
+        report: "income-statement-revenue-totals",
+        period,
+        totals: {
+          totalTmt: satyslarLineNet + gymmatyLineNet + hyzmatlarLineNet,
+          totalUsd: satyslarReportNet + gymmatyReportNet + hyzmatlarReportNet
+        },
+        categories: agroCategories
+      };
+    }
 
     return {
       tenantId,
@@ -136,6 +172,7 @@ export class IncomeStatementService {
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(filters?.from, filters?.to);
     const rows = await this.repository.getExpenseTotals(
+      tenantId,
       period,
       {
         year: filters?.year,
@@ -173,6 +210,7 @@ export class IncomeStatementService {
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(filters?.from, filters?.to);
     const rows = await this.repository.getBalanceTotals(
+      tenantId,
       period,
       {
         year: filters?.year,
@@ -212,10 +250,14 @@ export class IncomeStatementService {
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(from, to);
 
-    const parsedCategory = category == null || String(category).trim() === "" ? undefined : Number(category);
+    const parsedCategoryRaw = category == null || String(category).trim() === "" ? undefined : String(category).trim();
+    const parsedCategory = parsedCategoryRaw != null ? Number(parsedCategoryRaw) : undefined;
 
     const detailParams = {
-      category: Number.isFinite(parsedCategory) ? parsedCategory : undefined,
+      category:
+        Number.isFinite(parsedCategory) && (isAgroTenant(tenantId) ? parsedCategory === 0 || parsedCategory === 4 : true)
+          ? parsedCategory
+          : undefined,
       offset,
       limit,
       year,
@@ -226,10 +268,10 @@ export class IncomeStatementService {
     const selectedClientCode = clientCode || getDefaultClientCode(tenantId);
     const rows =
       kind === "expense"
-        ? await this.repository.getExpenseDetails(period, detailParams, selectedClientCode)
+        ? await this.repository.getExpenseDetails(tenantId, period, detailParams, selectedClientCode)
         : kind === "balance"
-          ? await this.repository.getBalanceDetails(period, detailParams, selectedClientCode)
-          : await this.repository.getRevenueDetails(period, detailParams, selectedClientCode);
+          ? await this.repository.getBalanceDetails(tenantId, period, detailParams, selectedClientCode)
+          : await this.repository.getRevenueDetails(tenantId, period, detailParams, selectedClientCode);
 
     return {
       tenantId,
@@ -247,4 +289,8 @@ export class IncomeStatementService {
       rows
     };
   }
+}
+
+function isAgroTenant(tenantId: string) {
+  return String(tenantId).toLowerCase() === "agro";
 }
