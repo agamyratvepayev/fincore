@@ -108,7 +108,10 @@ export async function fetchBalanceDetails(tenantId, filters = {}) {
   delete retryFilters.limit;
   const retryUrl = withQuery(`/tenants/${tenantId}/reports/balance-sheet/details`, retryFilters);
   const retryResponse = await fetch(retryUrl, { cache: "no-store" });
-  if (!retryResponse.ok) throw new Error(`Failed to load balance details (${retryResponse.status})`);
+  if (!retryResponse.ok) {
+    const message = await responseErrorMessage(retryResponse);
+    throw new Error(`Failed to load balance details (${retryResponse.status}): ${message}`);
+  }
   return retryResponse.json();
 }
 

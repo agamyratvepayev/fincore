@@ -6,6 +6,7 @@ type DateParams = {
 };
 
 type DetailParams = DateParams & {
+  code?: string;
   category?: string;
   offset?: number;
   limit?: number;
@@ -29,4 +30,14 @@ export function queryMaterialTotals(params: DateParams = {}) {
 export function queryMaterialDetails(params: DetailParams = {}) {
   void params;
   return "EXEC AGRBALMATDET @CATEGORY = :category, @OFFSET = :offset, @LIMIT = :limit, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
+export function queryCreditTotals(params: DateParams = {}) {
+  void params;
+  return "EXEC AGRBALCRETOT @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
+export function queryCreditDetails(params: DetailParams = {}) {
+  void params;
+  return "EXEC AGRBALCREDET @CODE = :code, @OFFSET = :offset, @LIMIT = :limit, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
 }
