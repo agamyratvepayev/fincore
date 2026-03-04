@@ -5,6 +5,8 @@ import {
   queryAdvanceTotals,
   queryCashDetails,
   queryCashTotals,
+  queryCreditDetails,
+  queryCreditTotals,
   queryLoanDetails,
   queryLoanTotals,
   queryMaterialDetails,
@@ -70,6 +72,29 @@ export class BalanceSheetRepository {
       endDate: overrides?.endDate
     };
     return executeNamedQuery<Record<string, unknown>>(queryMaterialDetails(params), params);
+  }
+
+  async fetchCreditTotals(overrides?: DateParams) {
+    const params = {
+      year: overrides?.year,
+      month: overrides?.month,
+      startDate: overrides?.startDate,
+      endDate: overrides?.endDate
+    };
+    return executeNamedQuery<Record<string, unknown>>(queryCreditTotals(params), params);
+  }
+
+  async fetchCreditDetails(overrides?: DetailParams) {
+    const params = {
+      code: String(overrides?.code ?? overrides?.category ?? "").trim(),
+      offset: overrides?.offset ?? 0,
+      limit: overrides?.limit ?? 50,
+      year: overrides?.year,
+      month: overrides?.month,
+      startDate: overrides?.startDate,
+      endDate: overrides?.endDate
+    };
+    return executeNamedQuery<Record<string, unknown>>(queryCreditDetails(params), params);
   }
 
   async fetchLoanTotals(overrides?: DateParams) {
@@ -165,6 +190,18 @@ export class BalanceSheetRepository {
         REPORTNET: toNumeric(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur)
       }));
     }
+    if (filters?.kind === "credit") {
+      return this.fetchCreditDetails({
+        category: filters?.category,
+        code: filters?.code ?? filters?.category,
+        offset: filters?.offset,
+        limit: filters?.limit,
+        year: filters?.year,
+        month: filters?.month,
+        startDate: filters?.startDate,
+        endDate: filters?.endDate
+      });
+    }
     if (filters?.kind === "loan") {
       return this.fetchLoanDetails({
         category: filters?.category,
@@ -209,6 +246,19 @@ export class BalanceSheetRepository {
       amount: Number(row.AMOUNT ?? row.amount ?? 0),
       lineNet: Number(row.OUTCOST ?? row.outcost ?? 0),
       reportNet: Number(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0)
+    }));
+  }
+
+  async getCreditLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
+    void period;
+    const rows = await this.fetchCreditTotals(overrides);
+    return rows.map((row, index) => ({
+      code: String(row.CODE ?? row.code ?? `CREDIT_${index + 1}`),
+      label: String(row.DEFINITION_ ?? row.definition_ ?? row.DEFINITION ?? row.definition ?? `Credit ${index + 1}`),
+      amount: Number(row.AMOUNT ?? row.amount ?? 0),
+      lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
+      reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0),
+      group: String(row.GROUP_ ?? row.group_ ?? "BEYLEKILER")
     }));
   }
 

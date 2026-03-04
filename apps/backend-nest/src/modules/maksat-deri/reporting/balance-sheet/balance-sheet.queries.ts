@@ -32,6 +32,16 @@ export function queryMaterialDetails(params: DetailParams = {}) {
   return "EXEC MKDBALMATDET @CATEGORY = :category, @OFFSET = :offset, @LIMIT = :limit, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
 }
 
+export function queryCreditTotals(params: DateParams = {}) {
+  void params;
+  return "EXEC MKDBALCRETOT @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
+export function queryCreditDetails(params: DetailParams = {}) {
+  void params;
+  return "EXEC MKDBALCREDET @CODE = :code, @OFFSET = :offset, @LIMIT = :limit, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
 export function queryLoanTotals(params: DateParams = {}) {
   void params;
   return "EXEC MKDBALLOATOT @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
