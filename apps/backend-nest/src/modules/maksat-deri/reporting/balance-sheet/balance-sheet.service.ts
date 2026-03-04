@@ -119,9 +119,29 @@ export class BalanceSheetService {
     return this.emptyTotals(tenantId, "balance-sheet-bio-totals", filters);
   }
 
-  async loanTotals(tenantId: string, filters?: { from?: string; to?: string }) {
+  async loanTotals(
+    tenantId: string,
+    filters?: { from?: string; to?: string; year?: number; month?: number; startDate?: string; endDate?: string }
+  ) {
     await ensureReportingTenantReady(tenantId);
-    return this.emptyTotals(tenantId, "balance-sheet-loan-totals", filters);
+    const period = buildReportPeriod(filters?.from, filters?.to);
+    const rows = await this.repository.getLoanLines(period, {
+      year: filters?.year,
+      month: filters?.month,
+      startDate: filters?.startDate,
+      endDate: filters?.endDate
+    });
+
+    return {
+      tenantId,
+      report: "balance-sheet-loan-totals",
+      period,
+      totals: {
+        totalTmt: rows.reduce((acc, row) => acc + Number(row.lineNet ?? row.amount ?? 0), 0),
+        totalUsd: rows.reduce((acc, row) => acc + Number(row.reportNet ?? 0), 0)
+      },
+      categories: rows
+    };
   }
 
   async advanceTotals(tenantId: string, filters?: { from?: string; to?: string }) {

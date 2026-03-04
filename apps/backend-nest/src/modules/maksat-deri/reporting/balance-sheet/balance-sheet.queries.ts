@@ -6,6 +6,7 @@ type DateParams = {
 };
 
 type DetailParams = DateParams & {
+  code?: string;
   category?: string;
   offset?: number;
   limit?: number;
@@ -29,4 +30,14 @@ export function queryMaterialTotals(params: DateParams = {}) {
 export function queryMaterialDetails(params: DetailParams = {}) {
   void params;
   return "EXEC MKDBALMATDET @CATEGORY = :category, @OFFSET = :offset, @LIMIT = :limit, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
+export function queryLoanTotals(params: DateParams = {}) {
+  void params;
+  return "EXEC MKDBALLOATOT @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
+export function queryLoanDetails(params: DetailParams = {}) {
+  void params;
+  return "EXEC MKDBALLOADET @CODE = :code, @OFFSET = :offset, @LIMIT = :limit, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
 }

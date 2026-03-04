@@ -36,6 +36,8 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
   const tenant = resolveTenant(tenantId);
   if (!tenant) notFound();
   const isAgro = tenant.id === "agro";
+  const isMaksatDeri = tenant.id === "maksat-deri";
+  const supportsBio = !isAgro && !isMaksatDeri;
 
   const rawQuery = (await searchParams) ?? {};
   const year = rawQuery.year ? String(rawQuery.year) : "";
@@ -82,7 +84,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
       startDate: startDate || undefined,
       endDate: endDate || undefined
     }),
-    isAgro
+    !supportsBio
       ? Promise.resolve({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] })
       : fetchBalanceBioTotals(tenantId, {
           year: year || undefined,
@@ -199,7 +201,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
     materialRows.length > 0 ||
     creditRows.length > 0 ||
     debitRows.length > 0 ||
-    bioRows.length > 0 ||
+    (supportsBio && bioRows.length > 0) ||
     loanRows.length > 0 ||
     advanceRows.length > 0 ||
     intangibleRows.length > 0 ||
@@ -374,7 +376,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                       ))
                     : null}
 
-                  {!isAgro ? <tr className="income-main-total-row balance-category-row">
+                  {supportsBio ? <tr className="income-main-total-row balance-category-row">
                     <td style={{ textAlign: "left" }}>
                       <Link
                         href={`/${tenantId}/balance-sheet?${buildQuery({
@@ -406,7 +408,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                     <td>{money(bioTotalUsd)}</td>
                   </tr> : null}
 
-                  {!isAgro && expandBio
+                  {supportsBio && expandBio
                     ? bioRows.map((row, idx) => (
                         <tr key={`bio-${idx}`} className="income-category-row balance-name-row">
                           <td style={{ textAlign: "left" }}>
