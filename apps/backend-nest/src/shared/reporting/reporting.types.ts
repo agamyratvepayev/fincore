@@ -22,6 +22,7 @@ export type ReportResponse = {
 };
 
 export type ReportQuery = {
+  code?: string;
   client?: string;
   from?: string;
   to?: string;

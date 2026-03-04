@@ -89,6 +89,9 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
             : "cash";
   const showAmountColumn = kind === "material" || kind === "bio" || kind === "intangible";
   const category = rawQuery.category ? String(rawQuery.category) : rawQuery.code ? String(rawQuery.code) : "1";
+  const code = rawQuery.code ? String(rawQuery.code) : "";
+  const detailCode = code || category;
+  const detailCategory = kind === "advance" ? "" : category;
   const year = rawQuery.year ? String(rawQuery.year) : "";
   const month = rawQuery.month ? String(rawQuery.month) : "";
   const startDate = rawQuery.startDate ? String(rawQuery.startDate) : "";
@@ -101,7 +104,8 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
     fetchBalanceDetails(tenantId, {
       kind,
-      category,
+      category: detailCategory,
+      code: detailCode,
       year: year || undefined,
       month: month || undefined,
       startDate: startDate || undefined,
@@ -209,7 +213,8 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const backQuery = buildQuery({ year, month, startDate, endDate });
   const prevQuery = buildQuery({
     kind,
-    category,
+    category: detailCategory,
+    code: detailCode,
     year,
     month,
     startDate,
@@ -220,7 +225,8 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   });
   const nextQuery = buildQuery({
     kind,
-    category,
+    category: detailCategory,
+    code: detailCode,
     year,
     month,
     startDate,
@@ -269,7 +275,8 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
                     <Link
                       href={`/${tenantId}/balance-sheet/details?${buildQuery({
                         kind,
-                        category,
+                        category: detailCategory,
+                        code: detailCode,
                         year,
                         month,
                         startDate,
@@ -291,7 +298,8 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
                       <Link
                         href={`/${tenantId}/balance-sheet/details?${buildQuery({
                           kind,
-                          category,
+                          category: detailCategory,
+                          code: detailCode,
                           year,
                           month,
                           startDate,

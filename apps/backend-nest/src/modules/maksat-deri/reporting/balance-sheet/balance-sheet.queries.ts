@@ -41,3 +41,13 @@ export function queryLoanDetails(params: DetailParams = {}) {
   void params;
   return "EXEC MKDBALLOADET @CODE = :code, @OFFSET = :offset, @LIMIT = :limit, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
 }
+
+export function queryAdvanceTotals(params: DateParams = {}) {
+  void params;
+  return "EXEC MKDBALADVTOT @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}
+
+export function queryAdvanceDetails(params: DetailParams = {}) {
+  void params;
+  return "EXEC MKDBALADVDET @CODE = :code, @OFFSET = :offset, @LIMIT = :limit, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
+}

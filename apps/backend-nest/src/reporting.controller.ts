@@ -216,7 +216,8 @@ export class ReportingController {
                       : this.parseOptionalText((query as Record<string, unknown>).kind) === "share"
                         ? "share"
               : "cash",
-        category: this.parseOptionalText(query.category),
+        category: this.parseOptionalText(query.category) ?? this.queryCode(query),
+        code: this.queryCode(query),
         offset: this.parseOptionalNumber(query.offset),
         limit: this.parseOptionalNumber(query.limit),
         year: parsedYear,

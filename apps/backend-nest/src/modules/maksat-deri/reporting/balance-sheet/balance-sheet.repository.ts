@@ -1,6 +1,8 @@
 import { executeNamedQuery } from "@fincore/db-mssql/src/query.js";
 import type { ReportLine, ReportPeriod } from "../../../../shared/reporting/reporting.types.js";
 import {
+  queryAdvanceDetails,
+  queryAdvanceTotals,
   queryCashDetails,
   queryCashTotals,
   queryLoanDetails,
@@ -93,6 +95,29 @@ export class BalanceSheetRepository {
     return executeNamedQuery<Record<string, unknown>>(queryLoanDetails(params), params);
   }
 
+  async fetchAdvanceTotals(overrides?: DateParams) {
+    const params = {
+      year: overrides?.year,
+      month: overrides?.month,
+      startDate: overrides?.startDate,
+      endDate: overrides?.endDate
+    };
+    return executeNamedQuery<Record<string, unknown>>(queryAdvanceTotals(params), params);
+  }
+
+  async fetchAdvanceDetails(overrides?: DetailParams) {
+    const params = {
+      code: String(overrides?.code ?? overrides?.category ?? "").trim(),
+      offset: overrides?.offset ?? 0,
+      limit: overrides?.limit ?? 50,
+      year: overrides?.year,
+      month: overrides?.month,
+      startDate: overrides?.startDate,
+      endDate: overrides?.endDate
+    };
+    return executeNamedQuery<Record<string, unknown>>(queryAdvanceDetails(params), params);
+  }
+
   async getLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
     void period;
     const rows = await this.fetchCashTotals(overrides);
@@ -109,6 +134,7 @@ export class BalanceSheetRepository {
   async getDetails(
     period: ReportPeriod,
     filters?: {
+      code?: string;
       category?: string;
       offset?: number;
       limit?: number;
@@ -142,7 +168,19 @@ export class BalanceSheetRepository {
     if (filters?.kind === "loan") {
       return this.fetchLoanDetails({
         category: filters?.category,
-        code: filters?.category,
+        code: filters?.code ?? filters?.category,
+        offset: filters?.offset,
+        limit: filters?.limit,
+        year: filters?.year,
+        month: filters?.month,
+        startDate: filters?.startDate,
+        endDate: filters?.endDate
+      });
+    }
+    if (filters?.kind === "advance") {
+      return this.fetchAdvanceDetails({
+        category: filters?.category,
+        code: filters?.code ?? filters?.category,
         offset: filters?.offset,
         limit: filters?.limit,
         year: filters?.year,
@@ -180,6 +218,18 @@ export class BalanceSheetRepository {
     return rows.map((row, index) => ({
       code: String(row.CODE ?? row.code ?? `LOAN_${index + 1}`),
       label: String(row.DEFINITION_ ?? row.definition_ ?? row.DEFINITION ?? row.definition ?? `Loan ${index + 1}`),
+      amount: Number(row.AMOUNT ?? row.amount ?? 0),
+      lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
+      reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0)
+    }));
+  }
+
+  async getAdvanceLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
+    void period;
+    const rows = await this.fetchAdvanceTotals(overrides);
+    return rows.map((row, index) => ({
+      code: String(row.CODE ?? row.code ?? `ADV_${index + 1}`),
+      label: String(row.DEFINITION_ ?? row.definition_ ?? row.DEFINITION ?? row.definition ?? `Advance ${index + 1}`),
       amount: Number(row.AMOUNT ?? row.amount ?? 0),
       lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
       reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0)

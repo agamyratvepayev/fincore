@@ -472,6 +472,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                               href={`/${tenantId}/balance-sheet/details?${buildQuery({
                                 kind: "loan",
                                 category: String(row.code ?? idx + 1),
+                                code: String(row.code ?? ""),
                                 year,
                                 month,
                                 startDate,
@@ -527,7 +528,8 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                             <Link
                               href={`/${tenantId}/balance-sheet/details?${buildQuery({
                                 kind: "advance",
-                                category: String(row.code ?? idx + 1),
+                                category: "",
+                                code: String(row.code ?? ""),
                                 year,
                                 month,
                                 startDate,
