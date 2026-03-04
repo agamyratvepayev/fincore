@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Controller,
   Get,
+  HttpException,
   NotFoundException,
   Param,
   Query
@@ -12,6 +13,23 @@ import { resolveTenantOrNull } from "./platform/tenant/tenant.resolver.js";
 
 @Controller()
 export class ReportingController {
+  private errorMessage(error: unknown): string {
+    if (error instanceof AggregateError) {
+      const nested = Array.from(error.errors ?? [])
+        .map((item) => (item instanceof Error ? item.message : String(item)))
+        .filter(Boolean);
+      if (nested.length > 0) return `AggregateError: ${nested.join("; ")}`;
+      return error.message || "AggregateError";
+    }
+    if (error instanceof Error && error.message) return error.message;
+    return String(error ?? "Unknown error");
+  }
+
+  private rethrowBadRequest(error: unknown): never {
+    if (error instanceof HttpException) throw error;
+    throw new BadRequestException(this.errorMessage(error));
+  }
+
   private assertSupportedTenant(tenantId: string) {
     const tenant = resolveTenantOrNull(tenantId);
     if (!tenant) throw new NotFoundException(`Tenant '${tenantId}' not found.`);
@@ -46,7 +64,7 @@ export class ReportingController {
     try {
       return await provider.income.dateFilters(tenantId);
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -56,7 +74,7 @@ export class ReportingController {
     try {
       return await provider.income.clients(tenantId);
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -66,7 +84,7 @@ export class ReportingController {
     try {
       return await provider.income.execute(tenantId, query.from, query.to);
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -84,7 +102,7 @@ export class ReportingController {
         endDate: this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -102,7 +120,7 @@ export class ReportingController {
         endDate: this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -120,7 +138,7 @@ export class ReportingController {
         endDate: this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -144,8 +162,7 @@ export class ReportingController {
         this.parseOptionalNumber(query.limit)
       );
     } catch (error) {
-      if (error instanceof BadRequestException) throw error;
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -166,7 +183,7 @@ export class ReportingController {
         endDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -208,7 +225,7 @@ export class ReportingController {
         endDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -229,7 +246,7 @@ export class ReportingController {
         endDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -250,7 +267,7 @@ export class ReportingController {
         endDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -271,7 +288,7 @@ export class ReportingController {
         endDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -292,7 +309,7 @@ export class ReportingController {
         endDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -313,7 +330,7 @@ export class ReportingController {
         endDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -334,7 +351,7 @@ export class ReportingController {
         endDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -355,7 +372,7 @@ export class ReportingController {
         endDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 
@@ -376,7 +393,7 @@ export class ReportingController {
         endDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate)
       });
     } catch (error) {
-      throw new BadRequestException((error as Error).message);
+      this.rethrowBadRequest(error);
     }
   }
 }

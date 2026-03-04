@@ -58,6 +58,9 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
       month: month || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined
+    }).catch((error) => {
+      console.error(`[income-statement] revenue totals failed for tenant=${tenantId}`, error);
+      return { totals: { totalTmt: 0, totalUsd: 0 }, categories: [] };
     }),
     fetchIncomeExpenseTotals(tenantId, {
       code: isAgro ? undefined : code || undefined,
@@ -65,6 +68,9 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
       month: month || undefined,
       startDate: startDate || undefined,
       endDate: endDate || undefined
+    }).catch((error) => {
+      console.error(`[income-statement] expense totals failed for tenant=${tenantId}`, error);
+      return { totals: { totalTmt: 0, totalUsd: 0 }, categories: [] };
     }),
     isAgro
       ? Promise.resolve({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] })

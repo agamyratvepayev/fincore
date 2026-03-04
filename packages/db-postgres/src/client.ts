@@ -45,12 +45,27 @@ function envString(value: unknown) {
   return String(value);
 }
 
+function toBool(value: unknown, fallback: boolean) {
+  if (value == null) return fallback;
+  const text = String(value).trim().toLowerCase();
+  if (!text) return fallback;
+  return text === "1" || text === "true" || text === "yes" || text === "on";
+}
+
 loadEnvIfNeeded();
+
+const useSsl = toBool(process.env.PG_SSL, false);
+const rejectUnauthorized = toBool(process.env.PG_SSL_REJECT_UNAUTHORIZED, false);
 
 export const pgPool = new Pool({
   host: envString(process.env.PG_HOST) || "localhost",
   port: Number(envString(process.env.PG_PORT) || 5432),
   user: envString(process.env.PG_USER),
   password: envString(process.env.PG_PASSWORD),
-  database: envString(process.env.PG_DATABASE)
+  database: envString(process.env.PG_DATABASE),
+  ssl: useSsl
+    ? {
+        rejectUnauthorized
+      }
+    : undefined
 });

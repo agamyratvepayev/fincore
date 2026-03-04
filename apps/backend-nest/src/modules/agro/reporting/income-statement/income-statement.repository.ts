@@ -2,7 +2,6 @@ import { executeNamedQuery } from "@fincore/db-mssql/src/query.js";
 import {
   queryDateFilters,
   queryExpenseDetails,
-  queryExpenseDetailsFallback,
   queryExpenseTotals,
   queryRevenueDetails,
   queryRevenueTotals
@@ -44,12 +43,12 @@ export class IncomeStatementRepository {
     };
     const rows = await executeNamedQuery<Record<string, unknown>>(queryRevenueTotals(params), params);
     return rows.map((row) => ({
-      id: Number(row.ID ?? 0),
+      id: Number(row.ID ?? row.id ?? 0),
       category: String(row.CATEGORY ?? row.category ?? ""),
-      lineNet: Number(row.LINENET ?? 0),
-      reportNet: Number(row.REPORTNET ?? 0),
-      outCost: Number(row.OUTCOST ?? 0),
-      outCostCurr: Number(row.OUTCOSTCURR ?? row.OUTCOSTCUR ?? 0)
+      lineNet: Number(row.LINENET ?? row.linenet ?? 0),
+      reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0),
+      outCost: Number(row.OUTCOST ?? row.outcost ?? 0),
+      outCostCurr: Number(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0)
     }));
   }
 
@@ -62,12 +61,14 @@ export class IncomeStatementRepository {
     };
     const rows = await executeNamedQuery<Record<string, unknown>>(queryExpenseTotals(params), params);
     return rows.map((row) => ({
-      id: Number(row.RN ?? row.ID ?? 0),
+      id: Number(row.RN ?? row.rn ?? row.ID ?? row.id ?? 0),
       category: String(row.CATEGORY ?? row.category ?? ""),
-      lineNet: Number(row.LINENET ?? row.AMOUNT ?? row.OUTCOST ?? 0),
-      reportNet: Number(row.REPORTNET ?? row.OUTCOSTCURR ?? row.OUTCOSTCUR ?? 0),
-      outCost: Number(row.OUTCOST ?? 0),
-      outCostCurr: Number(row.OUTCOSTCURR ?? row.OUTCOSTCUR ?? 0)
+      lineNet: Number(row.LINENET ?? row.linenet ?? row.AMOUNT ?? row.amount ?? row.OUTCOST ?? row.outcost ?? 0),
+      reportNet: Number(
+        row.REPORTNET ?? row.reportnet ?? row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0
+      ),
+      outCost: Number(row.OUTCOST ?? row.outcost ?? 0),
+      outCostCurr: Number(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0)
     }));
   }
 
@@ -94,12 +95,6 @@ export class IncomeStatementRepository {
       startDate: detail?.startDate,
       endDate: detail?.endDate
     };
-    try {
-      return await executeNamedQuery<Record<string, unknown>>(queryExpenseDetails(params), params);
-    } catch (error) {
-      const message = String((error as Error)?.message ?? "");
-      if (!/converting data type varchar to float/i.test(message)) throw error;
-      return executeNamedQuery<Record<string, unknown>>(queryExpenseDetailsFallback(params), params);
-    }
+    return executeNamedQuery<Record<string, unknown>>(queryExpenseDetails(params), params);
   }
 }

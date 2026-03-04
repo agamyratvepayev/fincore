@@ -2,6 +2,8 @@ import { BalanceSheetService } from "../../../modules/gurlusyk/reporting/balance
 import { BalanceSheetService as AgroBalanceSheetService } from "../../../modules/agro/reporting/balance-sheet/balance-sheet.service.js";
 import { IncomeStatementService as AgroIncomeStatementService } from "../../../modules/agro/reporting/income-statement/income-statement.service.js";
 import { IncomeStatementService } from "../../../modules/gurlusyk/reporting/income-statement/income-statement.service.js";
+import { BalanceSheetService as MaksatDeriBalanceSheetService } from "../../../modules/maksat-deri/reporting/balance-sheet/balance-sheet.service.js";
+import { IncomeStatementService as MaksatDeriIncomeStatementService } from "../../../modules/maksat-deri/reporting/income-statement/income-statement.service.js";
 import type { TenantReportingProvider } from "../contracts/report.interface.js";
 
 const providers = new Map<string, TenantReportingProvider>([
@@ -19,6 +21,14 @@ const providers = new Map<string, TenantReportingProvider>([
       tenantId: "agro",
       income: new AgroIncomeStatementService(),
       balance: new AgroBalanceSheetService()
+    }
+  ],
+  [
+    "maksat-deri",
+    {
+      tenantId: "maksat-deri",
+      income: new MaksatDeriIncomeStatementService(),
+      balance: new MaksatDeriBalanceSheetService()
     }
   ]
 ]);

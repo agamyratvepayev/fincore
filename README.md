@@ -43,11 +43,13 @@ fincore/
 
 ## Quick Start
 ```bash
-pnpm db:up
+pnpm install
 pnpm dev
 ```
 
-Use `.env.example` as a baseline.
+Run PostgreSQL and MSSQL natively (no Docker), then configure `.env` with:
+- `PG_HOST`, `PG_PORT`, `PG_USER`, `PG_PASSWORD`, `PG_DATABASE`
+- `MSSQL_SERVER`, `MSSQL_PORT`, `MSSQL_USER`, `MSSQL_PASSWORD`, `MSSQL_DATABASE`, `MSSQL_ENCRYPT`
 
 ## MSSQL Env (supported)
 - Current keys: `MSSQL_SERVER`, `MSSQL_PORT`, `MSSQL_USER`, `MSSQL_PASSWORD`, `MSSQL_DATABASE`, `MSSQL_ENCRYPT`

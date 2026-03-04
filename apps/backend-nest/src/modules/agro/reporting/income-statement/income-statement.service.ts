@@ -2,6 +2,13 @@ import { buildReportPeriod, ensureReportingTenantReady } from "../../../../share
 import type { ReportResponse } from "../../../../shared/reporting/reporting.types.js";
 import { IncomeStatementRepository } from "./income-statement.repository.js";
 
+type DateFilters = {
+  year?: number;
+  month?: number;
+  startDate?: string;
+  endDate?: string;
+};
+
 export class IncomeStatementService {
   constructor(private readonly repository = new IncomeStatementRepository()) {}
 
@@ -62,15 +69,18 @@ export class IncomeStatementService {
   ) {
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(filters?.from, filters?.to);
-    const rows = await this.repository.getRevenueTotals({
-      year: filters?.year,
-      month: filters?.month,
-      startDate: filters?.startDate,
-      endDate: filters?.endDate
-    });
+    const normalized = await this.resolveDateFilters(filters);
+    const rows = await this.repository.getRevenueTotals(normalized);
 
-    const satyslar = rows.find((row) => row.category.toUpperCase() === "SATYSLAR");
-    const hyzmatlar = rows.find((row) => row.category.toUpperCase() === "HYZMATLAR");
+    const findByIdOrName = (targetId: number, targetName: string) =>
+      rows.find((row) => {
+        const id = Number((row as { id?: number }).id ?? NaN);
+        const category = String((row as { category?: string }).category ?? "").trim().toUpperCase();
+        return id === targetId || category === targetName;
+      });
+
+    const satyslar = findByIdOrName(2, "SATYSLAR");
+    const hyzmatlar = findByIdOrName(1, "HYZMATLAR");
 
     const satyslarLineNet = Number(satyslar?.lineNet ?? 0);
     const satyslarReportNet = Number(satyslar?.reportNet ?? 0);
@@ -108,12 +118,8 @@ export class IncomeStatementService {
   ) {
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(filters?.from, filters?.to);
-    const rows = await this.repository.getExpenseTotals({
-      year: filters?.year,
-      month: filters?.month,
-      startDate: filters?.startDate,
-      endDate: filters?.endDate
-    });
+    const normalized = await this.resolveDateFilters(filters);
+    const rows = await this.repository.getExpenseTotals(normalized);
     return {
       tenantId,
       report: "income-statement-expense-totals",
@@ -160,6 +166,7 @@ export class IncomeStatementService {
     void clientCode;
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(from, to);
+    const normalized = await this.resolveDateFilters({ year, month, startDate, endDate });
 
     if (kind === "balance") {
       return {
@@ -182,19 +189,13 @@ export class IncomeStatementService {
             id: validId,
             offset: offset ?? 0,
             limit: limit ?? 50,
-            year,
-            month,
-            startDate,
-            endDate
+            ...normalized
           })
         : await this.repository.getRevenueDetails({
             id: isGymmaty ? 2 : validId,
             offset,
             limit,
-            year,
-            month,
-            startDate,
-            endDate
+            ...normalized
           });
     const resultRows = isGymmaty
       ? rows.map((row) => ({
@@ -227,4 +228,53 @@ export class IncomeStatementService {
       rows: resultRows
     };
   }
+
+  private async resolveDateFilters(input?: DateFilters): Promise<DateFilters> {
+    const direct = normalizeDateFilters(input);
+    if (direct.year != null || direct.month != null || direct.startDate || direct.endDate) {
+      return direct;
+    }
+
+    const rows = await this.repository.getDateFilters();
+    const latestDate = rows
+      .map((row) => {
+        const value = row.DATE_ ?? row.date_ ?? row.date ?? Object.values(row)[0];
+        const parsed = value ? new Date(String(value)) : null;
+        return parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
+      })
+      .filter((value): value is Date => value !== null)
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+
+    if (latestDate) {
+      return {
+        year: latestDate.getUTCFullYear(),
+        month: latestDate.getUTCMonth() + 1
+      };
+    }
+
+    return {};
+  }
+}
+
+function normalizeDateFilters(input?: DateFilters): DateFilters {
+  const year = Number.isFinite(input?.year) ? Number(input?.year) : undefined;
+  const month = Number.isFinite(input?.month) ? Number(input?.month) : undefined;
+  const startDate = normalizeText(input?.startDate);
+  const endDate = normalizeText(input?.endDate);
+  const hasYearOrMonth = year != null || month != null;
+
+  if (hasYearOrMonth) {
+    // Agro procedures are sensitive to mixed period modes; when year/month are set, ignore date range.
+    return { year, month };
+  }
+  if (startDate || endDate) {
+    return { startDate, endDate };
+  }
+  return {};
+}
+
+function normalizeText(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  const text = String(value).trim();
+  return text || undefined;
 }

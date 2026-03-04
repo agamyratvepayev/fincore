@@ -26,6 +26,14 @@ const TENANT_REPORTS = {
       label: "Balans Hasabaty",
       description: "Balance Sheet"
     }
+  ],
+  "maksat-deri": [
+    {
+      id: "balance-sheet",
+      slug: "balance-sheet",
+      label: "Balans Hasabaty",
+      description: "Balance Sheet"
+    }
   ]
 };
 

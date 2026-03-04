@@ -26,21 +26,30 @@ function withQuery(path, query = {}) {
 export async function fetchIncomeRevenueTotals(tenantId, filters = {}) {
   const url = withQuery(`/tenants/${tenantId}/reports/income-statement/revenue-totals`, filters);
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Failed to load revenue totals (${response.status})`);
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load revenue totals (${response.status}): ${message}`);
+  }
   return response.json();
 }
 
 export async function fetchIncomeExpenseTotals(tenantId, filters = {}) {
   const url = withQuery(`/tenants/${tenantId}/reports/income-statement/expense-totals`, filters);
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Failed to load expense totals (${response.status})`);
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load expense totals (${response.status}): ${message}`);
+  }
   return response.json();
 }
 
 export async function fetchIncomeBalanceTotals(tenantId, filters = {}) {
   const url = withQuery(`/tenants/${tenantId}/reports/income-statement/balance-totals`, filters);
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Failed to load balance totals (${response.status})`);
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load balance totals (${response.status}): ${message}`);
+  }
   return response.json();
 }
 
@@ -94,7 +103,10 @@ export async function fetchIncomeClients(tenantId) {
 export async function fetchBalanceTotals(tenantId, filters = {}) {
   const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet`, filters);
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Failed to load balance totals (${response.status})`);
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load balance totals (${response.status}): ${message}`);
+  }
   return response.json();
 }
 
@@ -118,55 +130,79 @@ export async function fetchBalanceDetails(tenantId, filters = {}) {
 export async function fetchBalanceMaterialTotals(tenantId, filters = {}) {
   const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/material-totals`, filters);
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Failed to load balance material totals (${response.status})`);
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load balance material totals (${response.status}): ${message}`);
+  }
   return response.json();
 }
 
 export async function fetchBalanceCreditTotals(tenantId, filters = {}) {
   const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/credit-totals`, filters);
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Failed to load balance credit totals (${response.status})`);
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load balance credit totals (${response.status}): ${message}`);
+  }
   return response.json();
 }
 
 export async function fetchBalanceDebitTotals(tenantId, filters = {}) {
   const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/debit-totals`, filters);
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Failed to load balance debit totals (${response.status})`);
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load balance debit totals (${response.status}): ${message}`);
+  }
   return response.json();
 }
 
 export async function fetchBalanceBioTotals(tenantId, filters = {}) {
   const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/bio-totals`, filters);
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Failed to load balance bio totals (${response.status})`);
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load balance bio totals (${response.status}): ${message}`);
+  }
   return response.json();
 }
 
 export async function fetchBalanceLoanTotals(tenantId, filters = {}) {
   const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/loan-totals`, filters);
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Failed to load balance loan totals (${response.status})`);
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load balance loan totals (${response.status}): ${message}`);
+  }
   return response.json();
 }
 
 export async function fetchBalanceAdvanceTotals(tenantId, filters = {}) {
   const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/advance-totals`, filters);
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Failed to load balance advance totals (${response.status})`);
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load balance advance totals (${response.status}): ${message}`);
+  }
   return response.json();
 }
 
 export async function fetchBalanceIntangibleTotals(tenantId, filters = {}) {
   const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/intangible-totals`, filters);
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Failed to load balance intangible totals (${response.status})`);
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load balance intangible totals (${response.status}): ${message}`);
+  }
   return response.json();
 }
 
 export async function fetchBalanceShareTotals(tenantId, filters = {}) {
   const url = withQuery(`/tenants/${tenantId}/reports/balance-sheet/share-totals`, filters);
   const response = await fetch(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Failed to load balance share totals (${response.status})`);
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load balance share totals (${response.status}): ${message}`);
+  }
   return response.json();
 }

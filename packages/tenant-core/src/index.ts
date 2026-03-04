@@ -37,6 +37,13 @@ const tenants: TenantConfig[] = [
     pgSchema: "tenant_b",
     mssqlDatabase: "ReportingB",
     features: { reporting: false, automation: false }
+  },
+  {
+    id: "maksat-deri",
+    name: "Maksat Deri",
+    pgSchema: "maksat_deri",
+    mssqlDatabase: "ReportingMaksatDeri",
+    features: { reporting: true, automation: false }
   }
 ];
 
