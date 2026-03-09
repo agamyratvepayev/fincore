@@ -58,6 +58,9 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
 
   const rawQuery = (await searchParams) ?? {};
   const isAgro = tenantId === "agro";
+  const isGurlusyk = tenantId === "gurlusyk";
+  const isMaksatDeri = tenantId === "maksat-deri";
+  const usesClientCode = isGurlusyk;
   const defaultClientCode = "120.05.001";
   const kind = rawQuery.kind === "expense" ? "expense" : rawQuery.kind === "balance" ? "balance" : "revenue";
   const rawCategory = rawQuery.category ? String(rawQuery.category) : isAgro ? "2" : "1";
@@ -70,14 +73,19 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
         : "2"
       : String(Math.max(1, toNumber(rawCategory, 1)))
     : rawCategory;
-  const code = isAgro ? "" : rawQuery.code ? String(rawQuery.code) : defaultClientCode;
+  const code = usesClientCode ? (rawQuery.code ? String(rawQuery.code) : defaultClientCode) : "";
   const year = rawQuery.year ? String(rawQuery.year) : "";
   const month = rawQuery.month ? String(rawQuery.month) : "";
   const startDate = rawQuery.startDate ? String(rawQuery.startDate) : "";
   const endDate = rawQuery.endDate ? String(rawQuery.endDate) : "";
   const groupParamKey = isAgro ? (kind === "expense" ? "group" : "whouse") : kind === "expense" || kind === "balance" ? "type" : "specode";
+  const hideTypeSummary = isMaksatDeri && kind === "expense";
+  const isMaksatExpenseView = isMaksatDeri && kind === "expense";
+  const showGroupColumn = !hideTypeSummary;
   const selectedGroup =
-    isAgro
+    hideTypeSummary
+      ? ""
+      : isAgro
       ? kind === "expense"
         ? rawQuery.group
           ? String(rawQuery.group).trim()
@@ -101,10 +109,10 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
 
   const [dateFilterData, clientsData, detailsData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
-    isAgro ? Promise.resolve([]) : fetchIncomeClients(tenantId).catch(() => []),
+    usesClientCode ? fetchIncomeClients(tenantId).catch(() => []) : Promise.resolve([]),
     fetchIncomeDetails(tenantId, kind, {
       category,
-      code: isAgro ? undefined : code || undefined,
+      code: usesClientCode ? code || undefined : undefined,
       year: year || undefined,
       month: month || undefined,
       startDate: startDate || undefined,
@@ -163,17 +171,17 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
   const years = Array.isArray(dateFilterData?.years) ? dateFilterData.years : [];
   const months = Array.isArray(dateFilterData?.months) ? dateFilterData.months : [];
   const clients = Array.isArray(clientsData) ? clientsData : [];
-  const backQuery = buildQuery({ code: isAgro ? "" : code, year, month, startDate, endDate });
+  const backQuery = buildQuery({ code: usesClientCode ? code : "", year, month, startDate, endDate });
   const prevQuery = buildQuery({
     kind,
     category,
     gymmaty: isGymmatyView ? "1" : "",
-    code: isAgro ? "" : code,
+    code: usesClientCode ? code : "",
     year,
     month,
     startDate,
     endDate,
-    [groupParamKey]: selectedGroup,
+    [groupParamKey]: hideTypeSummary ? "" : selectedGroup,
     limit,
     offset: Math.max(0, offset - limit)
   });
@@ -181,12 +189,12 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
     kind,
     category,
     gymmaty: isGymmatyView ? "1" : "",
-    code: isAgro ? "" : code,
+    code: usesClientCode ? code : "",
     year,
     month,
     startDate,
     endDate,
-    [groupParamKey]: selectedGroup,
+    [groupParamKey]: hideTypeSummary ? "" : selectedGroup,
     limit,
     offset: offset + limit
   });
@@ -219,7 +227,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
             </Link>
             <div className="income-detail-name">{categoryName}</div>
           </div>
-          {isAgro && kind === "expense" ? null : (
+          {isAgro && kind === "expense" ? null : hideTypeSummary ? null : (
             <div className="income-specode-wrap">
               <table className="income-specode-table">
                 <thead>
@@ -238,7 +246,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
                           kind,
                           category,
                           gymmaty: isGymmatyView ? "1" : "",
-                          code: isAgro ? "" : code,
+                          code: usesClientCode ? code : "",
                           year,
                           month,
                           startDate,
@@ -262,7 +270,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
                             kind,
                             category,
                             gymmaty: isGymmatyView ? "1" : "",
-                            code: isAgro ? "" : code,
+                            code: usesClientCode ? code : "",
                             year,
                             month,
                             startDate,
@@ -288,24 +296,51 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
           <table className="income-details-table">
             <thead>
               <tr>
-                <th className="income-details-date-col" style={{ textAlign: "center" }}>Date</th>
-                <th style={{ textAlign: "center" }}>{groupLabel}</th>
-                {showNameAmountColumns ? <th style={{ textAlign: "center" }}>ITEMNAME</th> : null}
-                {showNameAmountColumns ? <th style={{ textAlign: "center" }}>Amount</th> : null}
-                <th style={{ textAlign: "center" }}>Line Exp</th>
-                <th className="income-details-money-col">TMT</th>
-                <th className="income-details-money-col">USD</th>
+                {isMaksatExpenseView ? (
+                  <>
+                    <th className="income-details-date-col" style={{ textAlign: "center" }}>DATE_</th>
+                    <th style={{ textAlign: "center" }}>DEFINITION_</th>
+                    <th style={{ textAlign: "center" }}>LINEEXP</th>
+                    <th style={{ textAlign: "center" }}>AMOUNT</th>
+                    <th className="income-details-money-col">LINENET</th>
+                    <th className="income-details-money-col">REPORTNET</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="income-details-date-col" style={{ textAlign: "center" }}>Date</th>
+                    {showGroupColumn ? <th style={{ textAlign: "center" }}>{groupLabel}</th> : null}
+                    {showNameAmountColumns ? <th style={{ textAlign: "center" }}>ITEMNAME</th> : null}
+                    {showNameAmountColumns ? <th style={{ textAlign: "center" }}>Amount</th> : null}
+                    <th style={{ textAlign: "center" }}>Line Exp</th>
+                    <th className="income-details-money-col">TMT</th>
+                    <th className="income-details-money-col">USD</th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={showNameAmountColumns ? 7 : 5} style={{ textAlign: "center", color: "#64748b" }}>
+                  <td colSpan={isMaksatExpenseView ? 6 : showNameAmountColumns ? (showGroupColumn ? 7 : 6) : showGroupColumn ? 5 : 4} style={{ textAlign: "center", color: "#64748b" }}>
                     No details
                   </td>
                 </tr>
               ) : (
                 rows.map((row, idx) => {
+                  if (isMaksatExpenseView) {
+                    return (
+                      <tr key={`row-${idx}`}>
+                        <td className="income-details-date-col" style={{ textAlign: "center" }}>
+                          {isoDate(row.DATE_ ?? row.date_ ?? row.date)}
+                        </td>
+                        <td style={{ textAlign: "center" }}>{String(row.DEFINITION_ ?? row.definition_ ?? "-")}</td>
+                        <td style={{ textAlign: "center" }}>{String(row.LINEEXP ?? row.lineexp ?? "-")}</td>
+                        <td style={{ textAlign: "center" }}>{String(row.AMOUNT ?? row.amount ?? "-")}</td>
+                        <td className="income-details-money-col">{money(row.LINENET ?? row.linenet)}</td>
+                        <td className="income-details-money-col">{money(row.REPORTNET ?? row.reportnet)}</td>
+                      </tr>
+                    );
+                  }
                   const amountText = text(row.AMOUNT ?? row.amount);
                   const nameText = amountText ? String(row.DEFINITION_ ?? row.definition_ ?? row.ITEMNAME ?? row.itemname ?? "") : "";
                   const groupValue = normalizeGroup(row) || "-";
@@ -314,7 +349,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
                       <td className="income-details-date-col" style={{ textAlign: "center" }}>
                         {isoDate(row.DATE_ ?? row.date_ ?? row.date)}
                       </td>
-                      <td style={{ textAlign: "center" }}>{groupValue}</td>
+                      {showGroupColumn ? <td style={{ textAlign: "center" }}>{groupValue}</td> : null}
                       {showNameAmountColumns ? <td style={{ textAlign: "center" }}>{nameText}</td> : null}
                       {showNameAmountColumns ? <td style={{ textAlign: "center" }}>{amountText}</td> : null}
                       <td style={{ textAlign: "center" }}>{String(row.LINEEXP ?? row.lineexp ?? "-")}</td>
@@ -376,9 +411,9 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
         extraParams={{
           kind,
           gymmaty: isGymmatyView ? "1" : "",
-          [groupParamKey]: selectedGroup
+          [groupParamKey]: hideTypeSummary ? "" : selectedGroup
         }}
-        showClient={!isAgro}
+        showClient={usesClientCode}
       />
     </div>
   );

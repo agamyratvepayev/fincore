@@ -76,20 +76,22 @@ export default function IncomeFiltersCard({
     <div className={`filter-card income-filter-card${compact ? " income-filter-card-compact" : ""}`}>
       <div className="filter-head income-filter-head">{title}</div>
       <div className="filter-body">
-        <label className="filter-label">Client</label>
         {showClient ? (
-          <select value={code} onChange={onChange("code")} className="filter-control income-select-compact">
-            {clients.map((client, idx) => {
-              const clientCode = String(client.code ?? "").trim();
-              const clientName = String(client.name ?? clientCode).trim();
-              if (!clientCode) return null;
-              return (
-                <option key={`${clientCode}-${idx}`} value={clientCode}>
-                  {clientName}
-                </option>
-              );
-            })}
-          </select>
+          <>
+            <label className="filter-label">Client</label>
+            <select value={code} onChange={onChange("code")} className="filter-control income-select-compact">
+              {clients.map((client, idx) => {
+                const clientCode = String(client.code ?? "").trim();
+                const clientName = String(client.name ?? clientCode).trim();
+                if (!clientCode) return null;
+                return (
+                  <option key={`${clientCode}-${idx}`} value={clientCode}>
+                    {clientName}
+                  </option>
+                );
+              })}
+            </select>
+          </>
         ) : null}
 
         <div className="filter-grid-two">

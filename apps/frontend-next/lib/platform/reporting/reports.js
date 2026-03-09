@@ -29,6 +29,12 @@ const TENANT_REPORTS = {
   ],
   "maksat-deri": [
     {
+      id: "income-statement",
+      slug: "income-statement",
+      label: "Peyda Hasabaty",
+      description: "Income Statement"
+    },
+    {
       id: "balance-sheet",
       slug: "balance-sheet",
       label: "Balans Hasabaty",

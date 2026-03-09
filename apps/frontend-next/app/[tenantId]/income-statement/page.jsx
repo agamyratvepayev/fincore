@@ -42,18 +42,21 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
 
   const rawQuery = (await searchParams) ?? {};
   const isAgro = tenantId === "agro";
+  const isGurlusyk = tenantId === "gurlusyk";
+  const isMaksatDeri = tenantId === "maksat-deri";
+  const usesClientCode = isGurlusyk;
   const defaultClientCode = "120.05.001";
   const year = rawQuery.year ? String(rawQuery.year) : "";
   const month = rawQuery.month ? String(rawQuery.month) : "";
   const startDate = rawQuery.startDate ? String(rawQuery.startDate) : "";
   const endDate = rawQuery.endDate ? String(rawQuery.endDate) : "";
-  const code = isAgro ? "" : rawQuery.code ? String(rawQuery.code) : defaultClientCode;
+  const code = usesClientCode ? (rawQuery.code ? String(rawQuery.code) : defaultClientCode) : "";
 
   const [dateFilterData, clientsData, revenueData, expenseData, balanceData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
-    isAgro ? Promise.resolve([]) : fetchIncomeClients(tenantId).catch(() => []),
+    usesClientCode ? fetchIncomeClients(tenantId).catch(() => []) : Promise.resolve([]),
     fetchIncomeRevenueTotals(tenantId, {
-      code: isAgro ? undefined : code || undefined,
+      code: usesClientCode ? code || undefined : undefined,
       year: year || undefined,
       month: month || undefined,
       startDate: startDate || undefined,
@@ -63,7 +66,7 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
       return { totals: { totalTmt: 0, totalUsd: 0 }, categories: [] };
     }),
     fetchIncomeExpenseTotals(tenantId, {
-      code: isAgro ? undefined : code || undefined,
+      code: usesClientCode ? code || undefined : undefined,
       year: year || undefined,
       month: month || undefined,
       startDate: startDate || undefined,
@@ -72,18 +75,29 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
       console.error(`[income-statement] expense totals failed for tenant=${tenantId}`, error);
       return { totals: { totalTmt: 0, totalUsd: 0 }, categories: [] };
     }),
-    isAgro
-      ? Promise.resolve({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] })
-      : fetchIncomeBalanceTotals(tenantId, {
+    isGurlusyk
+      ? fetchIncomeBalanceTotals(tenantId, {
           code: code || undefined,
           year: year || undefined,
           month: month || undefined,
           startDate: startDate || undefined,
           endDate: endDate || undefined
         })
+      : Promise.resolve({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] })
   ]);
 
-  const revenueCategories = Array.isArray(revenueData?.categories) ? revenueData.categories : [];
+  const revenueCategoriesRaw = Array.isArray(revenueData?.categories) ? revenueData.categories : [];
+  const revenueCategories = isMaksatDeri
+    ? [...revenueCategoriesRaw].sort((a, b) => {
+        const rank = (name) => {
+          const key = String(name ?? "").trim().toUpperCase();
+          if (key === "SATYSLAR") return 0;
+          if (key === "HYZMATLAR") return 1;
+          return 2;
+        };
+        return rank(a?.name) - rank(b?.name);
+      })
+    : revenueCategoriesRaw;
   const expenseCategories = Array.isArray(expenseData?.categories) ? expenseData.categories : [];
   const revenueTotalTmt = Number(revenueData?.totals?.totalTmt ?? 0);
   const revenueTotalUsd = Number(revenueData?.totals?.totalUsd ?? 0);
@@ -138,7 +152,7 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
                       kind: "revenue",
                       category: isGymmatyRow ? "2" : id,
                       gymmaty: isGymmatyRow ? "1" : "",
-                      code: isAgro ? "" : code,
+                      code: usesClientCode ? code : "",
                       year,
                       month,
                       startDate,
@@ -167,7 +181,7 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
                     const detailsQuery = buildQuery({
                       kind: "expense",
                       category: id,
-                      code: isAgro ? "" : code,
+                      code: usesClientCode ? code : "",
                       year,
                       month,
                       startDate,
@@ -197,7 +211,7 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
           </table>
         </div>
 
-        {isAgro ? null : (
+        {isGurlusyk ? (
           <div className="panel income-panel" style={{ marginTop: 16 }}>
             <div className="panel-title income-panel-title">
               <div className="income-title-client">ALGY-BERGI</div>
@@ -253,7 +267,7 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
               </tbody>
             </table>
           </div>
-        )}
+        ) : null}
       </div>
 
       <IncomeFiltersCard
@@ -266,7 +280,7 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
         clients={clients}
         months={months}
         years={years}
-        showClient={!isAgro}
+        showClient={usesClientCode}
       />
     </div>
   );

@@ -234,24 +234,6 @@ export class IncomeStatementService {
     if (direct.year != null || direct.month != null || direct.startDate || direct.endDate) {
       return direct;
     }
-
-    const rows = await this.repository.getDateFilters();
-    const latestDate = rows
-      .map((row) => {
-        const value = row.DATE_ ?? row.date_ ?? row.date ?? Object.values(row)[0];
-        const parsed = value ? new Date(String(value)) : null;
-        return parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
-      })
-      .filter((value): value is Date => value !== null)
-      .sort((a, b) => b.getTime() - a.getTime())[0];
-
-    if (latestDate) {
-      return {
-        year: latestDate.getUTCFullYear(),
-        month: latestDate.getUTCMonth() + 1
-      };
-    }
-
     return {};
   }
 }
