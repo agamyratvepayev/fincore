@@ -9,7 +9,12 @@ export async function POST(request) {
   const user = findUser(username);
 
   if (!user || user.password !== password) {
-    return NextResponse.redirect(new URL("/login?error=1", request.url), { status: 303 });
+    return new NextResponse(null, {
+      status: 303,
+      headers: {
+        Location: "/login?error=1"
+      }
+    });
   }
 
   const session = {
@@ -18,7 +23,12 @@ export async function POST(request) {
     tenantIds: user.tenantIds
   };
   const tenantId = defaultTenantIdForSession(session);
-  const response = NextResponse.redirect(new URL(`/${tenantId}`, request.url), { status: 303 });
+  const response = new NextResponse(null, {
+    status: 303,
+    headers: {
+      Location: `/${tenantId}`
+    }
+  });
   response.cookies.set(sessionCookieName(), encodeSession(session), {
     httpOnly: true,
     sameSite: "lax",

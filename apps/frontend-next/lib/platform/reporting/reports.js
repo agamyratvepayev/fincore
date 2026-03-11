@@ -40,6 +40,14 @@ const TENANT_REPORTS = {
       label: "Balans Hasabaty",
       description: "Balance Sheet"
     }
+  ],
+  yupluk: [
+    {
+      id: "income-statement",
+      slug: "income-statement",
+      label: "Peyda Hasabaty",
+      description: "Income Statement"
+    }
   ]
 };
 

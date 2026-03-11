@@ -99,6 +99,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const type = rawQuery.type ? String(rawQuery.type).trim() : "";
   const limit = Math.max(1, toNumber(rawQuery.limit, 50));
   const offset = Math.max(0, toNumber(rawQuery.offset, 0));
+  const detailsFetchLimit = 999999999;
 
   const [dateFilterData, detailsData, totalsData, materialTotalsData, creditTotalsData, debitTotalsData, bioTotalsData, loanTotalsData, advanceTotalsData, intangibleTotalsData, shareTotalsData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
@@ -106,6 +107,8 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
       kind,
       category: detailCategory,
       code: detailCode,
+      offset: 0,
+      limit: detailsFetchLimit,
       year: year || undefined,
       month: month || undefined,
       startDate: startDate || undefined,

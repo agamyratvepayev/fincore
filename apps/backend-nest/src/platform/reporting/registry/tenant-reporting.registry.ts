@@ -4,6 +4,8 @@ import { IncomeStatementService as AgroIncomeStatementService } from "../../../m
 import { IncomeStatementService } from "../../../modules/gurlusyk/reporting/income-statement/income-statement.service.js";
 import { BalanceSheetService as MaksatDeriBalanceSheetService } from "../../../modules/maksat-deri/reporting/balance-sheet/balance-sheet.service.js";
 import { IncomeStatementService as MaksatDeriIncomeStatementService } from "../../../modules/maksat-deri/reporting/income-statement/income-statement.service.js";
+import { BalanceSheetService as YuplukBalanceSheetService } from "../../../modules/yupluk/reporting/balance-sheet/balance-sheet.service.js";
+import { IncomeStatementService as YuplukIncomeStatementService } from "../../../modules/yupluk/reporting/income-statement/income-statement.service.js";
 import type { TenantReportingProvider } from "../contracts/report.interface.js";
 
 const providers = new Map<string, TenantReportingProvider>([
@@ -29,6 +31,14 @@ const providers = new Map<string, TenantReportingProvider>([
       tenantId: "maksat-deri",
       income: new MaksatDeriIncomeStatementService(),
       balance: new MaksatDeriBalanceSheetService()
+    }
+  ],
+  [
+    "yupluk",
+    {
+      tenantId: "yupluk",
+      income: new YuplukIncomeStatementService(),
+      balance: new YuplukBalanceSheetService()
     }
   ]
 ]);

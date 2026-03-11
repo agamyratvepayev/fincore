@@ -58,15 +58,19 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
 
   const rawQuery = (await searchParams) ?? {};
   const isAgro = tenantId === "agro";
+  const isYupluk = tenantId === "yupluk";
+  const isAgroLike = isAgro || isYupluk;
   const isGurlusyk = tenantId === "gurlusyk";
   const isMaksatDeri = tenantId === "maksat-deri";
   const usesClientCode = isGurlusyk;
   const defaultClientCode = "120.05.001";
   const kind = rawQuery.kind === "expense" ? "expense" : rawQuery.kind === "balance" ? "balance" : "revenue";
-  const rawCategory = rawQuery.category ? String(rawQuery.category) : isAgro ? "2" : "1";
+  const rawCategory = rawQuery.category ? String(rawQuery.category) : isAgroLike ? "2" : "1";
   const isGymmatyView =
-    isAgro && kind === "revenue" && (String(rawQuery.gymmaty ?? "") === "1" || rawCategory.toUpperCase() === "GYMMATY");
-  const category = isAgro
+    isAgroLike &&
+    kind === "revenue" &&
+    (String(rawQuery.gymmaty ?? "") === "1" || rawCategory.toUpperCase() === "GYMMATY");
+  const category = isAgroLike
     ? kind === "revenue"
       ? rawCategory === "1"
         ? "1"
@@ -78,14 +82,20 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
   const month = rawQuery.month ? String(rawQuery.month) : "";
   const startDate = rawQuery.startDate ? String(rawQuery.startDate) : "";
   const endDate = rawQuery.endDate ? String(rawQuery.endDate) : "";
-  const groupParamKey = isAgro ? (kind === "expense" ? "group" : "whouse") : kind === "expense" || kind === "balance" ? "type" : "specode";
+  const groupParamKey = isAgroLike
+    ? kind === "expense"
+      ? "group"
+      : "whouse"
+    : kind === "expense" || kind === "balance"
+      ? "type"
+      : "specode";
   const hideTypeSummary = isMaksatDeri && kind === "expense";
   const isMaksatExpenseView = isMaksatDeri && kind === "expense";
   const showGroupColumn = !hideTypeSummary;
   const selectedGroup =
     hideTypeSummary
       ? ""
-      : isAgro
+      : isAgroLike
       ? kind === "expense"
         ? rawQuery.group
           ? String(rawQuery.group).trim()
@@ -106,12 +116,15 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
         : "";
   const limit = Math.max(1, toNumber(rawQuery.limit, 50));
   const offset = Math.max(0, toNumber(rawQuery.offset, 0));
+  const detailsFetchLimit = 999999999;
 
   const [dateFilterData, clientsData, detailsData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
     usesClientCode ? fetchIncomeClients(tenantId).catch(() => []) : Promise.resolve([]),
     fetchIncomeDetails(tenantId, kind, {
       category,
+      offset: 0,
+      limit: detailsFetchLimit,
       code: usesClientCode ? code || undefined : undefined,
       year: year || undefined,
       month: month || undefined,
@@ -129,7 +142,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
         REPORTNET: -Number(row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0)
       }))
     : allRowsRaw;
-  const defaultCategoryName = isAgro
+  const defaultCategoryName = isAgroLike
     ? isGymmatyView
       ? "Gymmaty"
       : kind === "expense"
@@ -152,8 +165,8 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
       allRows[0]?.name ??
       defaultCategoryName
   ).trim();
-  const groupLabel = isAgro ? (kind === "expense" ? "Group" : "Whouse") : kind === "expense" ? "Type" : kind === "balance" ? "Type" : "Specode";
-  const normalizeGroup = isAgro
+  const groupLabel = isAgroLike ? (kind === "expense" ? "Group" : "Whouse") : kind === "expense" ? "Type" : kind === "balance" ? "Type" : "Specode";
+  const normalizeGroup = isAgroLike
     ? kind === "expense"
       ? (row) => String(row?.GROUP_ ?? row?.group_ ?? row?.GROUP ?? row?.group ?? "").trim()
       : (row) => String(row?.WHOUSE ?? row?.whouse ?? "").trim()
@@ -212,7 +225,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
     .map(([name, value]) => ({ name, tmt: value.tmt, usd: value.usd, count: value.count }))
     .sort((a, b) => b.tmt - a.tmt);
   const showNameAmountColumns = allRows.some((row) =>
-    isAgro
+    isAgroLike
       ? text(row.DEFINITION_ ?? row.definition_) && text(row.AMOUNT ?? row.amount)
       : text(row.ADDR1 ?? row.addr1) && text(row.AMOUNT ?? row.amount)
   );
@@ -227,7 +240,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
             </Link>
             <div className="income-detail-name">{categoryName}</div>
           </div>
-          {isAgro && kind === "expense" ? null : hideTypeSummary ? null : (
+          {isAgroLike && kind === "expense" ? null : hideTypeSummary ? null : (
             <div className="income-specode-wrap">
               <table className="income-specode-table">
                 <thead>

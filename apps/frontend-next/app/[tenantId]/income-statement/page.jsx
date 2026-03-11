@@ -4,6 +4,7 @@ import { resolveTenant } from "../../../lib/platform/tenant/resolve-tenant";
 import {
   fetchIncomeBalanceTotals,
   fetchIncomeClients,
+  fetchIncomeDetails,
   fetchIncomeDateFilters,
   fetchIncomeExpenseTotals,
   fetchIncomeRevenueTotals
@@ -42,6 +43,8 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
 
   const rawQuery = (await searchParams) ?? {};
   const isAgro = tenantId === "agro";
+  const isYupluk = tenantId === "yupluk";
+  const isAgroLike = isAgro || isYupluk;
   const isGurlusyk = tenantId === "gurlusyk";
   const isMaksatDeri = tenantId === "maksat-deri";
   const usesClientCode = isGurlusyk;
@@ -105,15 +108,45 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
   const expenseTotalUsd = Number(expenseData?.totals?.totalUsd ?? 0);
   const profitTotalTmt = revenueTotalTmt - expenseTotalTmt;
   const profitTotalUsd = revenueTotalUsd - expenseTotalUsd;
-  const balanceCategories = Array.isArray(balanceData?.categories) ? balanceData.categories : [];
-  const balanceTotalTmt = Number(balanceData?.totals?.totalTmt ?? 0);
-  const balanceTotalUsd = Number(balanceData?.totals?.totalUsd ?? 0);
+  const rawBalanceCategories = Array.isArray(balanceData?.categories) ? balanceData.categories : [];
+  const detailsFetchLimit = 999999999;
+  const balanceCategories = isGurlusyk
+    ? await Promise.all(
+        rawBalanceCategories.map(async (row, idx) => {
+          const id = toNumber(row?.id, idx + 1);
+          const detailsData = await fetchIncomeDetails(tenantId, "balance", {
+            category: id,
+            code: code || undefined,
+            year: year || undefined,
+            month: month || undefined,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
+            offset: 0,
+            limit: detailsFetchLimit
+          }).catch(() => ({ rows: [] }));
+          const detailRows = Array.isArray(detailsData?.rows) ? detailsData.rows : [];
+          const lineNet = detailRows.reduce((acc, detailRow) => acc + Number(detailRow.LINENET ?? detailRow.linenet ?? 0), 0);
+          const reportNet = detailRows.reduce(
+            (acc, detailRow) => acc + Number(detailRow.REPORTNET ?? detailRow.reportnet ?? 0),
+            0
+          );
+          return {
+            ...row,
+            id,
+            lineNet,
+            reportNet
+          };
+        })
+      )
+    : rawBalanceCategories;
+  const balanceTotalTmt = balanceCategories.reduce((acc, row) => acc + Number(row?.lineNet ?? 0), 0);
+  const balanceTotalUsd = balanceCategories.reduce((acc, row) => acc + Number(row?.reportNet ?? 0), 0);
   const years = Array.isArray(dateFilterData?.years) ? dateFilterData.years : [];
   const months = Array.isArray(dateFilterData?.months) ? dateFilterData.months : [];
   const clients = Array.isArray(clientsData) ? clientsData : [];
   const selectedClient = clients.find((client) => String(client.code ?? "").trim() === code) ?? null;
   const selectedClientName = String(
-    selectedClient?.name ?? selectedClient?.code ?? (isAgro ? "AGRO" : code)
+    selectedClient?.name ?? selectedClient?.code ?? (isAgroLike ? tenant.name : code)
   ).trim();
 
   return (
@@ -146,8 +179,8 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
                     <td>{money(revenueTotalUsd)}</td>
                   </tr>
                   {revenueCategories.map((row, idx) => {
-                    const id = isAgro ? toCategoryId(row.id ?? row.name, idx + 1) : toNumber(row.id, idx + 1);
-                    const isGymmatyRow = isAgro && String(row.id ?? "").toUpperCase() === "GYMMATY";
+                    const id = isAgroLike ? toCategoryId(row.id ?? row.name, idx + 1) : toNumber(row.id, idx + 1);
+                    const isGymmatyRow = isAgroLike && String(row.id ?? "").toUpperCase() === "GYMMATY";
                     const detailsQuery = buildQuery({
                       kind: "revenue",
                       category: isGymmatyRow ? "2" : id,

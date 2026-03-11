@@ -115,10 +115,12 @@ export class IncomeStatementRepository {
     const rows = await executeNamedQuery<Record<string, unknown>>(queryBalanceTotals(tenantId, params), params);
 
     return rows.map((row) => ({
-      id: Number(row.ID ?? 0),
-      name: String(row.CATEGORY ?? row.NAME ?? ""),
-      lineNet: Number(row.LINENET ?? 0),
-      reportNet: Number(row.REPORTNET ?? 0)
+      id: Number(row.ID ?? row.id ?? row.RN ?? row.rn ?? 0),
+      name: String(row.CATEGORY ?? row.category ?? row.NAME ?? row.name ?? row.ADDR1 ?? row.addr1 ?? ""),
+      lineNet: Number(row.LINENET ?? row.linenet ?? row.AMOUNT ?? row.amount ?? row.OUTCOST ?? row.outcost ?? 0),
+      reportNet: Number(
+        row.REPORTNET ?? row.reportnet ?? row.OUTCOSTCURR ?? row.outcostcurr ?? row.OUTCOSTCUR ?? row.outcostcur ?? 0
+      )
     }));
   }
 
