@@ -25,6 +25,13 @@ const tenants: TenantConfig[] = [
     features: { reporting: true, automation: true }
   },
   {
+    id: "algy-bergi",
+    name: "Algy-Bergi",
+    pgSchema: "algy_bergi",
+    mssqlDatabase: "UNRN",
+    features: { reporting: true, automation: false }
+  },
+  {
     id: "tenant-a",
     name: "Tenant A",
     pgSchema: "tenant_a",

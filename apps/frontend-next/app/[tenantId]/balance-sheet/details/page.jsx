@@ -67,6 +67,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const { tenantId } = await params;
   const tenant = resolveTenant(tenantId);
   if (!tenant) notFound();
+  const isAlgyBergi = tenant.id === "algy-bergi";
 
   const rawQuery = (await searchParams) ?? {};
   const kind =
@@ -100,6 +101,218 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   const limit = Math.max(1, toNumber(rawQuery.limit, 50));
   const offset = Math.max(0, toNumber(rawQuery.offset, 0));
   const detailsFetchLimit = 999999999;
+
+  if (isAlgyBergi) {
+    const [dateFilterData, detailsData, totalsData] = await Promise.all([
+      fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
+      fetchBalanceDetails(tenantId, {
+        code: detailCode,
+        offset: 0,
+        limit: detailsFetchLimit,
+        year: year || undefined,
+        month: month || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined
+      }).catch(() => []),
+      fetchBalanceTotals(tenantId, {
+        year: year || undefined,
+        month: month || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined
+      }).catch(() => ({ lines: [] }))
+    ]);
+
+    const allRows = Array.isArray(detailsData) ? detailsData : [];
+    const filteredRows = type
+      ? allRows.filter((row) => String(row.TYPE_ ?? row.type_ ?? row.TYPE ?? row.type ?? "").trim() === type)
+      : allRows;
+    const rows = filteredRows.slice(offset, offset + limit);
+    const hasPrev = offset > 0;
+    const hasNext = filteredRows.length > offset + limit;
+    const totalsRows = Array.isArray(totalsData?.lines) ? totalsData.lines : [];
+    const categoryName = String(
+      totalsRows.find((row) => String(row.code ?? "") === String(detailCode))?.label ??
+        allRows[0]?.DEFINITION_ ??
+        allRows[0]?.definition_ ??
+        detailCode
+    ).trim();
+    const years = Array.isArray(dateFilterData?.years) ? dateFilterData.years : [];
+    const months = Array.isArray(dateFilterData?.months) ? dateFilterData.months : [];
+    const backQuery = buildQuery({ year, month, startDate, endDate, group: rawQuery.group ? String(rawQuery.group) : "TANYSLAR" });
+    const prevQuery = buildQuery({
+      code: detailCode,
+      year,
+      month,
+      startDate,
+      endDate,
+      type,
+      limit,
+      offset: Math.max(0, offset - limit)
+    });
+    const nextQuery = buildQuery({
+      code: detailCode,
+      year,
+      month,
+      startDate,
+      endDate,
+      type,
+      limit,
+      offset: offset + limit
+    });
+    const typeSummaryMap = new Map();
+    allRows.forEach((row) => {
+      const key = String(row.TYPE_ ?? row.type_ ?? row.TYPE ?? row.type ?? "").trim() || "(No Type)";
+      const current = typeSummaryMap.get(key) ?? { balance: 0, count: 0 };
+      current.balance += Number(row.INCOME ?? row.income ?? 0) + Number(row.OUTCOME ?? row.outcome ?? 0);
+      current.count += 1;
+      typeSummaryMap.set(key, current);
+    });
+    const typeSummary = Array.from(typeSummaryMap.entries())
+      .map(([name, value]) => ({ name, balance: value.balance, count: value.count }))
+      .sort((a, b) => b.balance - a.balance);
+
+    return (
+      <div className="layout-grid income-layout-grid income-details-layout income-details-expanded">
+        <div>
+          <div className="panel">
+            <div className="panel-title income-detail-title">
+              <Link href={`/${tenantId}/balance-sheet${backQuery ? `?${backQuery}` : ""}`} className="income-detail-back">
+                Back to totals
+              </Link>
+              <div className="income-detail-name">{categoryName}</div>
+            </div>
+            <div className="income-specode-wrap">
+              <table className="income-specode-table">
+                <thead>
+                  <tr>
+                    <th style={{ paddingTop: 5, paddingBottom: 5 }}></th>
+                    <th style={{ paddingTop: 5, paddingBottom: 5 }}>Rows</th>
+                    <th style={{ paddingTop: 5, paddingBottom: 5 }}>Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className={`income-specode-total-row ${!type ? "active" : ""}`.trim()}>
+                    <td style={{ paddingTop: 5, paddingBottom: 5 }}>
+                      <Link
+                        href={`/${tenantId}/balance-sheet/details?${buildQuery({
+                          code: detailCode,
+                          year,
+                          month,
+                          startDate,
+                          endDate,
+                          limit,
+                          offset: 0
+                        })}`}
+                      >
+                        Totals
+                      </Link>
+                    </td>
+                    <td style={{ paddingTop: 5, paddingBottom: 5 }}>{allRows.length}</td>
+                    <td className="income-details-money-col" style={{ paddingTop: 5, paddingBottom: 5, fontSize: 14 }}>
+                      {money(allRows.reduce((acc, row) => acc + Number(row.INCOME ?? row.income ?? 0) + Number(row.OUTCOME ?? row.outcome ?? 0), 0))}
+                    </td>
+                  </tr>
+                  {typeSummary.map((item) => (
+                    <tr key={item.name} className={type === item.name ? "active" : ""}>
+                      <td style={{ paddingTop: 5, paddingBottom: 5 }}>
+                        <Link
+                          href={`/${tenantId}/balance-sheet/details?${buildQuery({
+                            code: detailCode,
+                            year,
+                            month,
+                            startDate,
+                            endDate,
+                            type: item.name === "(No Type)" ? "" : item.name,
+                            limit,
+                            offset: 0
+                          })}`}
+                        >
+                          {item.name}
+                        </Link>
+                      </td>
+                      <td style={{ paddingTop: 5, paddingBottom: 5 }}>{item.count}</td>
+                      <td className="income-details-money-col" style={{ paddingTop: 5, paddingBottom: 5, fontSize: 14 }}>
+                        {money(item.balance)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <table className="income-details-table">
+              <thead>
+                <tr>
+                  <th className="income-details-date-col" style={{ textAlign: "center" }}>Date</th>
+                  <th style={{ textAlign: "center" }}>Type</th>
+                  <th style={{ textAlign: "center" }}>Whouse</th>
+                  <th style={{ textAlign: "center" }}>Service</th>
+                  <th style={{ textAlign: "center" }}>Line Exp</th>
+                  <th className="income-details-money-col" style={{ paddingRight: 22 }}>Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: "center", color: "#64748b" }}>
+                      No details
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((row, idx) => {
+                    const income = Number(row.INCOME ?? row.income ?? 0);
+                    const outcome = Number(row.OUTCOME ?? row.outcome ?? 0);
+                    return (
+                      <tr key={`alb-detail-${idx}`}>
+                        <td className="income-details-date-col" style={{ textAlign: "center" }}>
+                          {isoDate(row.DATE_ ?? row.date_)}
+                        </td>
+                        <td style={{ textAlign: "center" }}>{String(row.TYPE_ ?? row.type_ ?? "-")}</td>
+                        <td style={{ textAlign: "center" }}>{String(row.WHOUSE ?? row.whouse ?? "-")}</td>
+                        <td style={{ textAlign: "center" }}>{String(row.SERVICE ?? row.service ?? "-")}</td>
+                        <td style={{ textAlign: "center" }}>{String(row.LINEEXP ?? row.lineexp ?? "-")}</td>
+                        <td className="income-details-money-col">{money(income + outcome)}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <Link
+              href={hasPrev ? `/${tenantId}/balance-sheet/details?${prevQuery}` : "#"}
+              aria-disabled={!hasPrev}
+              style={{ pointerEvents: hasPrev ? "auto" : "none", opacity: hasPrev ? 1 : 0.45, border: "1px solid #cbd5e1", borderRadius: 8, padding: "8px 12px", fontWeight: 700 }}
+            >
+              Prev
+            </Link>
+            <Link
+              href={hasNext ? `/${tenantId}/balance-sheet/details?${nextQuery}` : "#"}
+              aria-disabled={!hasNext}
+              style={{ pointerEvents: hasNext ? "auto" : "none", opacity: hasNext ? 1 : 0.45, border: "1px solid #cbd5e1", borderRadius: 8, padding: "8px 12px", fontWeight: 700 }}
+            >
+              Next
+            </Link>
+          </div>
+        </div>
+
+        <IncomeFiltersCard
+          title="Filters"
+          compact
+          showClient={false}
+          month={month}
+          year={year}
+          startDate={startDate}
+          endDate={endDate}
+          clients={[]}
+          months={months}
+          years={years}
+          extraParams={{ code: detailCode, group: rawQuery.group ? String(rawQuery.group) : "TANYSLAR", limit }}
+        />
+      </div>
+    );
+  }
 
   const [dateFilterData, detailsData, totalsData, materialTotalsData, creditTotalsData, debitTotalsData, bioTotalsData, loanTotalsData, advanceTotalsData, intangibleTotalsData, shareTotalsData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),

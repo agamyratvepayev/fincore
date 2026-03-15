@@ -1,4 +1,4 @@
-import type { BalanceDetailsFilters, DateRangeFilters, IncomeDetailsFilters } from "./dto.js";
+import type { BalanceDetailsFilters, CashflowFilters, DateRangeFilters, IncomeDetailsFilters } from "./dto.js";
 import type { ReportResponse } from "../../../shared/reporting/reporting.types.js";
 
 export interface IncomeReportingProvider {
@@ -37,8 +37,16 @@ export interface BalanceReportingProvider {
   shareTotals(tenantId: string, filters?: DateRangeFilters): Promise<unknown>;
 }
 
+export interface CashflowReportingProvider {
+  dateFilters(tenantId: string): Promise<unknown>;
+  accounts(tenantId: string): Promise<unknown>;
+  details(tenantId: string, filters?: CashflowFilters): Promise<unknown>;
+  totals(tenantId: string, filters?: CashflowFilters): Promise<unknown>;
+}
+
 export interface TenantReportingProvider {
   readonly tenantId: string;
   readonly income: IncomeReportingProvider;
   readonly balance: BalanceReportingProvider;
+  readonly cashflow?: CashflowReportingProvider;
 }

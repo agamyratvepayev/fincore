@@ -75,7 +75,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
       ? rawCategory === "1"
         ? "1"
         : "2"
-      : String(Math.max(1, toNumber(rawCategory, 1)))
+      : rawCategory
     : rawCategory;
   const code = usesClientCode ? (rawQuery.code ? String(rawQuery.code) : defaultClientCode) : "";
   const year = rawQuery.year ? String(rawQuery.year) : "";

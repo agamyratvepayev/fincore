@@ -21,3 +21,10 @@ export type BalanceDetailsFilters = DateRangeFilters & {
   offset?: number;
   limit?: number;
 };
+
+export type CashflowFilters = DateRangeFilters & {
+  code?: string;
+  clcode?: string;
+  offset?: number;
+  limit?: number;
+};

@@ -206,3 +206,43 @@ export async function fetchBalanceShareTotals(tenantId, filters = {}) {
   }
   return response.json();
 }
+
+export async function fetchCashflowTotals(tenantId, filters = {}) {
+  const url = withQuery(`/tenants/${tenantId}/reports/cashflow`, filters);
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load cashflow totals (${response.status}): ${message}`);
+  }
+  return response.json();
+}
+
+export async function fetchCashflowDetails(tenantId, filters = {}) {
+  const url = withQuery(`/tenants/${tenantId}/reports/cashflow/details`, filters);
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load cashflow details (${response.status}): ${message}`);
+  }
+  return response.json();
+}
+
+export async function fetchCashflowDateFilters(tenantId) {
+  const url = withQuery(`/tenants/${tenantId}/reports/cashflow/date-filters`);
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load cashflow date filters (${response.status}): ${message}`);
+  }
+  return response.json();
+}
+
+export async function fetchCashflowAccounts(tenantId) {
+  const url = withQuery(`/tenants/${tenantId}/reports/cashflow/accounts`);
+  const response = await fetch(url, { cache: "no-store" });
+  if (!response.ok) {
+    const message = await responseErrorMessage(response);
+    throw new Error(`Failed to load cashflow accounts (${response.status}): ${message}`);
+  }
+  return response.json();
+}

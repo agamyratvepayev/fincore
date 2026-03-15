@@ -182,7 +182,11 @@ export class IncomeStatementService {
     const parsedCategoryRaw = category == null || String(category).trim() === "" ? undefined : String(category).trim();
     const isGymmaty = String(parsedCategoryRaw ?? "").toUpperCase() === "GYMMATY";
     const parsedCategory = parsedCategoryRaw != null ? Number(parsedCategoryRaw) : undefined;
-    const validId = Number.isFinite(parsedCategory) ? Number(parsedCategory) : kind === "revenue" ? 2 : 1;
+    const validId = Number.isFinite(parsedCategory)
+      ? Number(parsedCategory)
+      : kind === "expense"
+        ? await this.resolveExpenseCategoryId(normalized, parsedCategoryRaw)
+        : 2;
 
     const rows =
       kind === "expense"
@@ -238,6 +242,15 @@ export class IncomeStatementService {
     }
     return {};
   }
+
+  private async resolveExpenseCategoryId(filters: DateFilters, category?: string): Promise<number> {
+    const name = String(category ?? "").trim();
+    if (!name) return 1;
+
+    const rows = await this.repository.getExpenseTotals(filters);
+    const match = rows.find((row) => normalizeCategory(row.category) === normalizeCategory(name));
+    return match && Number.isFinite(match.id) ? Number(match.id) : 1;
+  }
 }
 
 function normalizeDateFilters(input?: DateFilters): DateFilters {
@@ -260,4 +273,8 @@ function normalizeText(value: unknown): string | undefined {
   if (value == null) return undefined;
   const text = String(value).trim();
   return text || undefined;
+}
+
+function normalizeCategory(value: unknown): string {
+  return String(value ?? "").trim().replace(/\s+/g, " ").toUpperCase();
 }

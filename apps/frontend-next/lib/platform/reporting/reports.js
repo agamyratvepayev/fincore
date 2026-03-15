@@ -27,7 +27,7 @@ const TENANT_REPORTS = {
       description: "Balance Sheet"
     }
   ],
-  "maksat-deri": [
+  "algy-bergi": [
     {
       id: "income-statement",
       slug: "income-statement",
@@ -41,12 +41,38 @@ const TENANT_REPORTS = {
       description: "Balance Sheet"
     }
   ],
+  "maksat-deri": [
+    {
+      id: "income-statement",
+      slug: "income-statement",
+      label: "Peyda Hasabaty",
+      description: "Income Statement"
+    },
+    {
+      id: "balance-sheet",
+      slug: "balance-sheet",
+      label: "Balans Hasabaty",
+      description: "Balance Sheet"
+    },
+    {
+      id: "cashflow",
+      slug: "cashflow",
+      label: "Pul Hasabaty",
+      description: "Cashflow"
+    }
+  ],
   yupluk: [
     {
       id: "income-statement",
       slug: "income-statement",
       label: "Peyda Hasabaty",
       description: "Income Statement"
+    },
+    {
+      id: "balance-sheet",
+      slug: "balance-sheet",
+      label: "Balans Hasabaty",
+      description: "Balance Sheet"
     }
   ]
 };

@@ -1,7 +1,10 @@
 import { BalanceSheetService } from "../../../modules/gurlusyk/reporting/balance-sheet/balance-sheet.service.js";
 import { BalanceSheetService as AgroBalanceSheetService } from "../../../modules/agro/reporting/balance-sheet/balance-sheet.service.js";
 import { IncomeStatementService as AgroIncomeStatementService } from "../../../modules/agro/reporting/income-statement/income-statement.service.js";
+import { BalanceSheetService as AlgyBergiBalanceSheetService } from "../../../modules/algy-bergi/reporting/balance-sheet/balance-sheet.service.js";
+import { IncomeStatementService as AlgyBergiIncomeStatementService } from "../../../modules/algy-bergi/reporting/income-statement/income-statement.service.js";
 import { IncomeStatementService } from "../../../modules/gurlusyk/reporting/income-statement/income-statement.service.js";
+import { CashflowService as MaksatDeriCashflowService } from "../../../modules/maksat-deri/reporting/cashflow/cashflow.service.js";
 import { BalanceSheetService as MaksatDeriBalanceSheetService } from "../../../modules/maksat-deri/reporting/balance-sheet/balance-sheet.service.js";
 import { IncomeStatementService as MaksatDeriIncomeStatementService } from "../../../modules/maksat-deri/reporting/income-statement/income-statement.service.js";
 import { BalanceSheetService as YuplukBalanceSheetService } from "../../../modules/yupluk/reporting/balance-sheet/balance-sheet.service.js";
@@ -9,6 +12,14 @@ import { IncomeStatementService as YuplukIncomeStatementService } from "../../..
 import type { TenantReportingProvider } from "../contracts/report.interface.js";
 
 const providers = new Map<string, TenantReportingProvider>([
+  [
+    "algy-bergi",
+    {
+      tenantId: "algy-bergi",
+      income: new AlgyBergiIncomeStatementService(),
+      balance: new AlgyBergiBalanceSheetService()
+    }
+  ],
   [
     "gurlusyk",
     {
@@ -30,7 +41,8 @@ const providers = new Map<string, TenantReportingProvider>([
     {
       tenantId: "maksat-deri",
       income: new MaksatDeriIncomeStatementService(),
-      balance: new MaksatDeriBalanceSheetService()
+      balance: new MaksatDeriBalanceSheetService(),
+      cashflow: new MaksatDeriCashflowService()
     }
   ],
   [

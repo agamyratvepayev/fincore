@@ -10,11 +10,12 @@ export type ReportLine = {
   lineNet?: number;
   reportNet?: number;
   group?: string;
+  accountCode?: string;
 };
 
 export type ReportResponse = {
   tenantId: string;
-  report: "income-statement" | "balance-sheet";
+  report: "income-statement" | "balance-sheet" | "cashflow";
   period: ReportPeriod;
   currency: "USD";
   generatedAt: string;
@@ -36,6 +37,7 @@ export type ReportQuery = {
     | "revenue"
     | "expense"
     | "balance"
+    | "cashflow"
     | "cash"
     | "material"
     | "credit"
@@ -46,6 +48,7 @@ export type ReportQuery = {
     | "intangible"
     | "share";
   category?: string;
+  clcode?: string;
   offset?: number;
   limit?: number;
 };

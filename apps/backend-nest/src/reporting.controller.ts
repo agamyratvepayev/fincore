@@ -40,6 +40,14 @@ export class ReportingController {
     return provider;
   }
 
+  private assertCashflowTenant(tenantId: string) {
+    const provider = this.assertSupportedTenant(tenantId);
+    if (!provider.cashflow) {
+      throw new BadRequestException(`Tenant '${tenantId}' does not support cashflow reporting in this build.`);
+    }
+    return provider.cashflow;
+  }
+
   private parseOptionalNumber(value: unknown) {
     if (value == null) return undefined;
     const text = String(value).trim();
@@ -161,6 +169,65 @@ export class ReportingController {
         this.parseOptionalNumber(query.offset),
         this.parseOptionalNumber(query.limit)
       );
+    } catch (error) {
+      this.rethrowBadRequest(error);
+    }
+  }
+
+  @Get("/tenants/:tenantId/reports/cashflow")
+  async cashflowTotals(@Param("tenantId") tenantId: string, @Query() query: ReportQuery) {
+    const cashflow = this.assertCashflowTenant(tenantId);
+    try {
+      return await cashflow.totals(tenantId, {
+        from: query.from,
+        to: query.to,
+        code: this.parseOptionalText(query.code) ?? this.parseOptionalText(query.client),
+        year: this.parseOptionalNumber(query.year),
+        month: this.parseOptionalNumber(query.month),
+        startDate: this.parseOptionalText(query.startDate ?? query.startdate),
+        endDate: this.parseOptionalText(query.endDate ?? query.enddate)
+      });
+    } catch (error) {
+      this.rethrowBadRequest(error);
+    }
+  }
+
+  @Get("/tenants/:tenantId/reports/cashflow/details")
+  async cashflowDetails(@Param("tenantId") tenantId: string, @Query() query: ReportQuery) {
+    const cashflow = this.assertCashflowTenant(tenantId);
+    try {
+      return await cashflow.details(tenantId, {
+        from: query.from,
+        to: query.to,
+        code: this.parseOptionalText(query.code) ?? this.parseOptionalText(query.client),
+        clcode: this.parseOptionalText((query as Record<string, unknown>).clcode),
+        year: this.parseOptionalNumber(query.year),
+        month: this.parseOptionalNumber(query.month),
+        startDate: this.parseOptionalText(query.startDate ?? query.startdate),
+        endDate: this.parseOptionalText(query.endDate ?? query.enddate),
+        offset: this.parseOptionalNumber(query.offset),
+        limit: this.parseOptionalNumber(query.limit)
+      });
+    } catch (error) {
+      this.rethrowBadRequest(error);
+    }
+  }
+
+  @Get("/tenants/:tenantId/reports/cashflow/date-filters")
+  async cashflowDateFilters(@Param("tenantId") tenantId: string) {
+    const cashflow = this.assertCashflowTenant(tenantId);
+    try {
+      return await cashflow.dateFilters(tenantId);
+    } catch (error) {
+      this.rethrowBadRequest(error);
+    }
+  }
+
+  @Get("/tenants/:tenantId/reports/cashflow/accounts")
+  async cashflowAccounts(@Param("tenantId") tenantId: string) {
+    const cashflow = this.assertCashflowTenant(tenantId);
+    try {
+      return await cashflow.accounts(tenantId);
     } catch (error) {
       this.rethrowBadRequest(error);
     }

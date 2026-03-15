@@ -211,9 +211,10 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
                   </tr>
                   {expenseCategories.map((row, idx) => {
                     const id = toNumber(row.id, idx + 1);
+                    const expenseCategory = isAgroLike ? String(row.name ?? id) : id;
                     const detailsQuery = buildQuery({
                       kind: "expense",
-                      category: id,
+                      category: expenseCategory,
                       code: usesClientCode ? code : "",
                       year,
                       month,

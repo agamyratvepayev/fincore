@@ -9,8 +9,6 @@ import {
   queryCreditTotals,
   queryDebitDetails,
   queryDebitTotals,
-  queryLoanDetails,
-  queryLoanTotals,
   queryMaterialDetails,
   queryMaterialTotals
 } from "./balance-sheet.queries.js";
@@ -122,29 +120,6 @@ export class BalanceSheetRepository {
     return executeNamedQuery<Record<string, unknown>>(queryDebitDetails(params), params);
   }
 
-  async fetchLoanTotals(overrides?: DateParams) {
-    const params = {
-      year: overrides?.year,
-      month: overrides?.month,
-      startDate: overrides?.startDate,
-      endDate: overrides?.endDate
-    };
-    return executeNamedQuery<Record<string, unknown>>(queryLoanTotals(params), params);
-  }
-
-  async fetchLoanDetails(overrides?: DetailParams) {
-    const params = {
-      code: String(overrides?.code ?? overrides?.category ?? "").trim(),
-      offset: overrides?.offset ?? 0,
-      limit: overrides?.limit ?? 50,
-      year: overrides?.year,
-      month: overrides?.month,
-      startDate: overrides?.startDate,
-      endDate: overrides?.endDate
-    };
-    return executeNamedQuery<Record<string, unknown>>(queryLoanDetails(params), params);
-  }
-
   async fetchAdvanceTotals(overrides?: DateParams) {
     const params = {
       year: overrides?.year,
@@ -173,7 +148,6 @@ export class BalanceSheetRepository {
     const rows = await this.fetchCashTotals(overrides);
     return rows.map((row, index) => ({
       code: String(row.ID ?? row.id ?? `CASH_${index + 1}`),
-      accountCode: String(row.CODE ?? row.code ?? ""),
       label: String(row.NAME ?? row.name ?? `Cash ${index + 1}`),
       amount: Number(row.AMOUNT ?? row.amount ?? 0),
       lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
@@ -219,7 +193,6 @@ export class BalanceSheetRepository {
     if (filters?.kind === "credit") {
       return this.fetchCreditDetails({
         category: filters?.category,
-        code: filters?.code ?? filters?.category,
         offset: filters?.offset,
         limit: filters?.limit,
         year: filters?.year,
@@ -231,19 +204,6 @@ export class BalanceSheetRepository {
     if (filters?.kind === "debit") {
       return this.fetchDebitDetails({
         category: filters?.category,
-        code: filters?.code ?? filters?.category,
-        offset: filters?.offset,
-        limit: filters?.limit,
-        year: filters?.year,
-        month: filters?.month,
-        startDate: filters?.startDate,
-        endDate: filters?.endDate
-      });
-    }
-    if (filters?.kind === "loan") {
-      return this.fetchLoanDetails({
-        category: filters?.category,
-        code: filters?.code ?? filters?.category,
         offset: filters?.offset,
         limit: filters?.limit,
         year: filters?.year,
@@ -255,7 +215,6 @@ export class BalanceSheetRepository {
     if (filters?.kind === "advance") {
       return this.fetchAdvanceDetails({
         category: filters?.category,
-        code: filters?.code ?? filters?.category,
         offset: filters?.offset,
         limit: filters?.limit,
         year: filters?.year,
@@ -310,18 +269,6 @@ export class BalanceSheetRepository {
       lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
       reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0),
       group: String(row.GROUP_ ?? row.group_ ?? "BEYLEKILER")
-    }));
-  }
-
-  async getLoanLines(period: ReportPeriod, overrides?: DateParams): Promise<ReportLine[]> {
-    void period;
-    const rows = await this.fetchLoanTotals(overrides);
-    return rows.map((row, index) => ({
-      code: String(row.CODE ?? row.code ?? `LOAN_${index + 1}`),
-      label: String(row.DEFINITION_ ?? row.definition_ ?? row.DEFINITION ?? row.definition ?? `Loan ${index + 1}`),
-      amount: Number(row.AMOUNT ?? row.amount ?? 0),
-      lineNet: Number(row.AMOUNT ?? row.amount ?? 0),
-      reportNet: Number(row.REPORTNET ?? row.reportnet ?? 0)
     }));
   }
 

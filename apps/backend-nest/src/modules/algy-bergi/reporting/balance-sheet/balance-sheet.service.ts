@@ -55,11 +55,11 @@ export class BalanceSheetService {
     }
   ) {
     void filters?.client;
+    void filters?.category;
+    void filters?.kind;
     await ensureReportingTenantReady(tenantId);
     const period = buildReportPeriod(filters?.from, filters?.to);
     return this.repository.getDetails(period, {
-      kind: filters?.kind,
-      category: filters?.category,
       code: filters?.code,
       offset: filters?.offset,
       limit: filters?.limit,
@@ -81,28 +81,9 @@ export class BalanceSheetService {
     };
   }
 
-  async materialTotals(
-    tenantId: string,
-    filters?: { from?: string; to?: string; year?: number; month?: number; startDate?: string; endDate?: string }
-  ) {
+  async materialTotals(tenantId: string, filters?: { from?: string; to?: string }) {
     await ensureReportingTenantReady(tenantId);
-    const period = buildReportPeriod(filters?.from, filters?.to);
-    const rows = await this.repository.getMaterialLines(period, {
-      year: filters?.year,
-      month: filters?.month,
-      startDate: filters?.startDate,
-      endDate: filters?.endDate
-    });
-    return {
-      tenantId,
-      report: "balance-sheet-material-totals",
-      period,
-      totals: {
-        totalTmt: rows.reduce((acc, row) => acc + Number(row.lineNet ?? row.amount ?? 0), 0),
-        totalUsd: rows.reduce((acc, row) => acc + Number(row.reportNet ?? 0), 0)
-      },
-      categories: rows
-    };
+    return this.emptyTotals(tenantId, "balance-sheet-material-totals", filters);
   }
 
   async creditTotals(
@@ -123,34 +104,15 @@ export class BalanceSheetService {
       period,
       totals: {
         totalTmt: rows.reduce((acc, row) => acc + Number(row.lineNet ?? row.amount ?? 0), 0),
-        totalUsd: rows.reduce((acc, row) => acc + Number(row.reportNet ?? 0), 0)
+        totalUsd: 0
       },
       categories: rows
     };
   }
 
-  async debitTotals(
-    tenantId: string,
-    filters?: { from?: string; to?: string; year?: number; month?: number; startDate?: string; endDate?: string }
-  ) {
+  async debitTotals(tenantId: string, filters?: { from?: string; to?: string }) {
     await ensureReportingTenantReady(tenantId);
-    const period = buildReportPeriod(filters?.from, filters?.to);
-    const rows = await this.repository.getDebitLines(period, {
-      year: filters?.year,
-      month: filters?.month,
-      startDate: filters?.startDate,
-      endDate: filters?.endDate
-    });
-    return {
-      tenantId,
-      report: "balance-sheet-debit-totals",
-      period,
-      totals: {
-        totalTmt: rows.reduce((acc, row) => acc + Number(row.lineNet ?? row.amount ?? 0), 0),
-        totalUsd: rows.reduce((acc, row) => acc + Number(row.reportNet ?? 0), 0)
-      },
-      categories: rows
-    };
+    return this.emptyTotals(tenantId, "balance-sheet-debit-totals", filters);
   }
 
   async bioTotals(tenantId: string, filters?: { from?: string; to?: string }) {
@@ -163,28 +125,9 @@ export class BalanceSheetService {
     return this.emptyTotals(tenantId, "balance-sheet-loan-totals", filters);
   }
 
-  async advanceTotals(
-    tenantId: string,
-    filters?: { from?: string; to?: string; year?: number; month?: number; startDate?: string; endDate?: string }
-  ) {
+  async advanceTotals(tenantId: string, filters?: { from?: string; to?: string }) {
     await ensureReportingTenantReady(tenantId);
-    const period = buildReportPeriod(filters?.from, filters?.to);
-    const rows = await this.repository.getAdvanceLines(period, {
-      year: filters?.year,
-      month: filters?.month,
-      startDate: filters?.startDate,
-      endDate: filters?.endDate
-    });
-    return {
-      tenantId,
-      report: "balance-sheet-advance-totals",
-      period,
-      totals: {
-        totalTmt: rows.reduce((acc, row) => acc + Number(row.lineNet ?? row.amount ?? 0), 0),
-        totalUsd: rows.reduce((acc, row) => acc + Number(row.reportNet ?? 0), 0)
-      },
-      categories: rows
-    };
+    return this.emptyTotals(tenantId, "balance-sheet-advance-totals", filters);
   }
 
   async intangibleTotals(tenantId: string, filters?: { from?: string; to?: string }) {

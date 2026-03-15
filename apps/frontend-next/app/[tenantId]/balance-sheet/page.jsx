@@ -36,8 +36,11 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
   const tenant = resolveTenant(tenantId);
   if (!tenant) notFound();
   const isAgro = tenant.id === "agro";
+  const isYupluk = tenant.id === "yupluk";
+  const isAgroLike = isAgro || isYupluk;
   const isMaksatDeri = tenant.id === "maksat-deri";
-  const supportsBio = !isAgro && !isMaksatDeri;
+  const isAlgyBergi = tenant.id === "algy-bergi";
+  const supportsBio = !isAgroLike && !isMaksatDeri;
 
   const rawQuery = (await searchParams) ?? {};
   const year = rawQuery.year ? String(rawQuery.year) : "";
@@ -53,7 +56,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
   const expandAdvance = rawQuery.expandAdvance === "1";
   const expandIntangible = rawQuery.expandIntangible === "1";
   const expandShare = rawQuery.expandShare === "1";
-  const selectedGroup = rawQuery.group ? String(rawQuery.group) : "";
+  const selectedGroup = rawQuery.group ? String(rawQuery.group) : isAlgyBergi ? "TANYSLAR" : "";
   const selectedCreditGroup = rawQuery.creditGroup ? String(rawQuery.creditGroup) : "";
   const selectedDebitGroup = rawQuery.debitGroup ? String(rawQuery.debitGroup) : "";
   const selectedShareGroup = rawQuery.shareGroup ? String(rawQuery.shareGroup) : "";
@@ -92,7 +95,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
           startDate: startDate || undefined,
           endDate: endDate || undefined
         }),
-    isAgro
+    isAgroLike
       ? Promise.resolve({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] })
       : fetchBalanceLoanTotals(tenantId, {
           year: year || undefined,
@@ -106,7 +109,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
       startDate: startDate || undefined,
       endDate: endDate || undefined
     }),
-    isAgro
+    isAgroLike
       ? Promise.resolve({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] })
       : fetchBalanceIntangibleTotals(tenantId, {
           year: year || undefined,
@@ -114,7 +117,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
           startDate: startDate || undefined,
           endDate: endDate || undefined
         }),
-    isAgro
+    isAgroLike
       ? Promise.resolve({ totals: { totalTmt: 0, totalUsd: 0 }, categories: [] })
       : fetchBalanceShareTotals(tenantId, {
           year: year || undefined,
@@ -206,6 +209,118 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
     advanceRows.length > 0 ||
     intangibleRows.length > 0 ||
     shareRows.length > 0;
+
+  if (isAlgyBergi) {
+    const algyGroupMap = new Map();
+    rows.forEach((row) => {
+      const group = String(row.group ?? "").trim() || "BEYLEKILER";
+      const current = algyGroupMap.get(group) ?? { income: 0, outcome: 0, balance: 0, rows: [] };
+      current.income += Number(row.lineNet ?? 0);
+      current.outcome += Number(row.reportNet ?? 0);
+      current.balance += Number(row.amount ?? row.lineNet ?? 0);
+      current.rows.push(row);
+      algyGroupMap.set(group, current);
+    });
+    const algyGroups = Array.from(algyGroupMap.entries()).map(([name, value]) => ({ name, ...value }));
+
+    return (
+      <div className="layout-grid income-layout-grid income-totals-layout">
+        <div>
+          <div className="panel income-panel">
+            <div className="panel-title income-panel-title">
+              <div className="income-title-client">BALANS HASABATY</div>
+            </div>
+            <table className="income-table balance-totals-table">
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left" }}></th>
+                  <th style={{ textAlign: "left", paddingLeft: 68 }}>Income</th>
+                  <th style={{ textAlign: "left", paddingLeft: 68 }}>Outcome</th>
+                  <th style={{ textAlign: "left", paddingLeft: 54 }}>Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {algyGroups.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ textAlign: "center", color: "#64748b" }}>
+                      No data
+                    </td>
+                  </tr>
+                ) : (
+                  algyGroups.map((group) => (
+                    <Fragment key={`alb-${group.name}`}>
+                      <tr className="row-expense balance-group-row">
+                        <td style={{ textAlign: "left" }}>
+                          <Link
+                            href={`/${tenantId}/balance-sheet?${buildQuery({
+                              group: selectedGroup === group.name ? "" : group.name,
+                              year,
+                              month,
+                              startDate,
+                              endDate
+                            })}`}
+                            className="income-category-link balance-level-link balance-level-group"
+                            style={{ paddingLeft: 0 }}
+                          >
+                            <span className="balance-level-indicator">{selectedGroup === group.name ? "▾" : "▸"}</span>
+                            {group.name}
+                          </Link>
+                        </td>
+                        <td style={{ textAlign: "right" }}>{money(group.income)}</td>
+                        <td style={{ textAlign: "right" }}>{money(group.outcome)}</td>
+                        <td style={{ textAlign: "right" }}>{money(group.balance)}</td>
+                      </tr>
+                      {selectedGroup === group.name
+                        ? group.rows.map((row, idx) => (
+                            <tr key={`alb-row-${group.name}-${idx}`} className="income-category-row balance-name-row">
+                              <td style={{ textAlign: "left", fontWeight: 500, color: "#526071" }}>
+                                <span style={{ display: "inline-flex", alignItems: "center", paddingLeft: 28 }}>
+                                  <span style={{ width: 14, display: "inline-block" }}></span>
+                                  <Link
+                                    href={`/${tenantId}/balance-sheet/details?${buildQuery({
+                                      code: String(row.code ?? ""),
+                                      year,
+                                      month,
+                                      startDate,
+                                      endDate
+                                    })}`}
+                                    className="income-category-link"
+                                    style={{ fontWeight: 500, color: "#526071" }}
+                                  >
+                                    {String(row.label ?? "-")}
+                                  </Link>
+                                </span>
+                              </td>
+                              <td style={{ textAlign: "right" }}>{money(row.lineNet)}</td>
+                              <td style={{ textAlign: "right" }}>{money(row.reportNet)}</td>
+                              <td style={{ textAlign: "right" }}>{money(row.amount)}</td>
+                            </tr>
+                          ))
+                        : null}
+                    </Fragment>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <IncomeFiltersCard
+          title="Filters"
+          compact
+          showClient={false}
+          month={month}
+          year={year}
+          startDate={startDate}
+          endDate={endDate}
+          clients={[]}
+          months={months}
+          years={years}
+          extraParams={{ group: selectedGroup }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="layout-grid income-layout-grid income-totals-layout">
@@ -320,7 +435,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                       ))
                     : null}
 
-                  <tr className="income-main-total-row balance-category-row">
+                  {!isAgroLike ? <tr className="income-main-total-row balance-category-row">
                     <td style={{ textAlign: "left" }}>
                       <Link
                         href={`/${tenantId}/balance-sheet?${buildQuery({
@@ -350,9 +465,9 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                   </td>
                   <td>{money(materialTotalTmt)}</td>
                   <td>{money(materialTotalUsd)}</td>
-                </tr>
+                </tr> : null}
 
-                  {expandMaterial
+                  {!isAgroLike && expandMaterial
                     ? materialRows.map((row, idx) => (
                         <tr key={`mat-${idx}`} className="income-category-row balance-name-row">
                           <td style={{ textAlign: "left" }}>
@@ -432,7 +547,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                       ))
                     : null}
 
-                  {!isAgro ? <tr className="income-main-total-row balance-category-row">
+                  {!isAgroLike ? <tr className="income-main-total-row balance-category-row">
                     <td style={{ textAlign: "left" }}>
                       <Link
                         href={`/${tenantId}/balance-sheet?${buildQuery({
@@ -464,7 +579,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                     <td>{money(loanTotalUsd)}</td>
                   </tr> : null}
 
-                  {!isAgro && expandLoan
+                  {!isAgroLike && expandLoan
                     ? loanRows.map((row, idx) => (
                         <tr key={`loan-${idx}`} className="income-category-row balance-name-row">
                           <td style={{ textAlign: "left" }}>
@@ -546,7 +661,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                       ))
                     : null}
 
-                  {!isAgro ? <tr className="income-main-total-row balance-category-row">
+                  {!isAgroLike ? <tr className="income-main-total-row balance-category-row">
                     <td style={{ textAlign: "left" }}>
                       <Link
                         href={`/${tenantId}/balance-sheet?${buildQuery({
@@ -578,7 +693,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                     <td>{money(intangibleTotalUsd)}</td>
                   </tr> : null}
 
-                  {!isAgro && expandIntangible
+                  {!isAgroLike && expandIntangible
                     ? intangibleRows.map((row, idx) => (
                         <tr key={`intangible-${idx}`} className="income-category-row balance-name-row">
                           <td style={{ textAlign: "left" }}>
@@ -790,7 +905,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                       ))
                     : null}
 
-                  {!isAgro ? <tr className="income-main-total-row balance-category-row">
+                  {!isAgroLike ? <tr className="income-main-total-row balance-category-row">
                     <td style={{ textAlign: "left" }}>
                       <Link
                         href={`/${tenantId}/balance-sheet?${buildQuery({
@@ -822,7 +937,7 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
                     <td>{money(shareTotalUsd)}</td>
                   </tr> : null}
 
-                  {!isAgro && expandShare
+                  {!isAgroLike && expandShare
                     ? shareGroups.map((group) => (
                         <Fragment key={`share-group-wrap-${group.name}`}>
                           <tr key={`share-group-${group.name}`} className="row-expense balance-group-row">
