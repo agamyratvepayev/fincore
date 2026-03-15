@@ -26,7 +26,9 @@ export default async function CashflowPage({ params, searchParams }) {
   const { tenantId } = await params;
   const tenant = resolveTenant(tenantId);
   if (!tenant) notFound();
-  if (tenant.id !== "maksat-deri") notFound();
+  const isMaksatDeri = tenant.id === "maksat-deri";
+  const isAlgyBergi = tenant.id === "algy-bergi";
+  if (!isMaksatDeri && !isAlgyBergi) notFound();
 
   const rawQuery = (await searchParams) ?? {};
   const year = rawQuery.year ? String(rawQuery.year) : "";
@@ -45,17 +47,15 @@ export default async function CashflowPage({ params, searchParams }) {
       code: String(row.code ?? "").trim(),
       name: String(row.name ?? row.code ?? "").trim()
     }))
-    .filter((row) => {
-      const name = row.name.toUpperCase();
-      return !name.includes("BANK");
-    })
+    .filter((row) => (isMaksatDeri ? !row.name.toUpperCase().includes("BANK") : true))
     .filter((row) => row.code);
   const cashAccounts = rawCashAccounts;
   const requestedCode = rawQuery.code ? String(rawQuery.code) : "";
   const hasRequestedCode = cashAccounts.some((row) => row.code === requestedCode);
-  const defaultCode = cashAccounts.some((row) => row.code === DEFAULT_CASHFLOW_CODE)
-    ? DEFAULT_CASHFLOW_CODE
-    : cashAccounts[0]?.code ?? "";
+  const defaultCode =
+    isMaksatDeri && cashAccounts.some((row) => row.code === DEFAULT_CASHFLOW_CODE)
+      ? DEFAULT_CASHFLOW_CODE
+      : cashAccounts[0]?.code ?? "";
   const code = hasRequestedCode ? requestedCode : defaultCode;
 
   if (code && requestedCode !== code) {

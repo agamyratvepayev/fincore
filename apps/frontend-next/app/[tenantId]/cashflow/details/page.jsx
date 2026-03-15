@@ -38,7 +38,8 @@ function isoDate(value) {
 export default async function CashflowDetailsPage({ params, searchParams }) {
   const { tenantId } = await params;
   const tenant = resolveTenant(tenantId);
-  if (!tenant || tenant.id !== "maksat-deri") notFound();
+  if (!tenant || (tenant.id !== "maksat-deri" && tenant.id !== "algy-bergi")) notFound();
+  const isMaksatDeri = tenant.id === "maksat-deri";
 
   const rawQuery = (await searchParams) ?? {};
   const code = rawQuery.code ? String(rawQuery.code) : "";
@@ -78,7 +79,7 @@ export default async function CashflowDetailsPage({ params, searchParams }) {
       name: String(row.name ?? row.code ?? "").trim()
     }))
     .filter((row) => row.code)
-    .filter((row) => !row.name.toUpperCase().includes("BANK"));
+    .filter((row) => (isMaksatDeri ? !row.name.toUpperCase().includes("BANK") : true));
 
   const selectedCash = clients.find((row) => row.code === code);
   const title = String(rows[0]?.CLIENT ?? rows[0]?.client ?? clcode).trim() || clcode;

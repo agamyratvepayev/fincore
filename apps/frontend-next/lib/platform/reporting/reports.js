@@ -39,6 +39,12 @@ const TENANT_REPORTS = {
       slug: "balance-sheet",
       label: "Balans Hasabaty",
       description: "Balance Sheet"
+    },
+    {
+      id: "cashflow",
+      slug: "cashflow",
+      label: "Pul Hasabaty",
+      description: "Cashflow"
     }
   ],
   "maksat-deri": [

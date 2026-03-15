@@ -2,6 +2,7 @@ import { BalanceSheetService } from "../../../modules/gurlusyk/reporting/balance
 import { BalanceSheetService as AgroBalanceSheetService } from "../../../modules/agro/reporting/balance-sheet/balance-sheet.service.js";
 import { IncomeStatementService as AgroIncomeStatementService } from "../../../modules/agro/reporting/income-statement/income-statement.service.js";
 import { BalanceSheetService as AlgyBergiBalanceSheetService } from "../../../modules/algy-bergi/reporting/balance-sheet/balance-sheet.service.js";
+import { CashflowService as AlgyBergiCashflowService } from "../../../modules/algy-bergi/reporting/cashflow/cashflow.service.js";
 import { IncomeStatementService as AlgyBergiIncomeStatementService } from "../../../modules/algy-bergi/reporting/income-statement/income-statement.service.js";
 import { IncomeStatementService } from "../../../modules/gurlusyk/reporting/income-statement/income-statement.service.js";
 import { CashflowService as MaksatDeriCashflowService } from "../../../modules/maksat-deri/reporting/cashflow/cashflow.service.js";
@@ -17,7 +18,8 @@ const providers = new Map<string, TenantReportingProvider>([
     {
       tenantId: "algy-bergi",
       income: new AlgyBergiIncomeStatementService(),
-      balance: new AlgyBergiBalanceSheetService()
+      balance: new AlgyBergiBalanceSheetService(),
+      cashflow: new AlgyBergiCashflowService()
     }
   ],
   [
