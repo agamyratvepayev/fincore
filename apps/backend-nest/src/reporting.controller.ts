@@ -160,7 +160,9 @@ export class ReportingController {
         kind,
         query.from,
         query.to,
-        this.parseOptionalText(query.client) ?? this.queryCode(query),
+        this.parseOptionalText((query as Record<string, unknown>).clcode) ??
+          this.parseOptionalText(query.client) ??
+          this.queryCode(query),
         this.parseOptionalNumber(query.year),
         this.parseOptionalNumber(query.month),
         this.parseOptionalText(query.startDate ?? query.startdate),
@@ -249,6 +251,20 @@ export class ReportingController {
         startDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.startDate ?? query.startdate),
         endDate: shouldIgnoreDates ? undefined : this.parseOptionalText(query.endDate ?? query.enddate)
       });
+    } catch (error) {
+      this.rethrowBadRequest(error);
+    }
+  }
+
+  @Get("/tenants/:tenantId/reports/balance-sheet/date-filters")
+  async balanceDateFilters(@Param("tenantId") tenantId: string) {
+    const provider = this.assertSupportedTenant(tenantId);
+    try {
+      const balanceWithDates = provider.balance as { dateFilters?: (tenantId: string) => Promise<unknown> };
+      if (typeof balanceWithDates.dateFilters !== "function") {
+        throw new BadRequestException(`Tenant '${tenantId}' does not support balance date filters in this build.`);
+      }
+      return await balanceWithDates.dateFilters(tenantId);
     } catch (error) {
       this.rethrowBadRequest(error);
     }

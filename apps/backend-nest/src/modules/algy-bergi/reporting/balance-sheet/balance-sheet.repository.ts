@@ -1,6 +1,6 @@
 import { executeNamedQuery } from "@fincore/db-mssql/src/query.js";
 import type { ReportLine, ReportPeriod } from "../../../../shared/reporting/reporting.types.js";
-import { queryCreditDetails, queryCreditTotals } from "./balance-sheet.queries.js";
+import { queryCreditDetails, queryCreditTotals, queryDateFilters } from "./balance-sheet.queries.js";
 
 type DateParams = {
   code?: string;
@@ -13,6 +13,10 @@ type DateParams = {
 };
 
 export class BalanceSheetRepository {
+  async fetchDateFilters() {
+    return executeNamedQuery<Record<string, unknown>>(queryDateFilters(), {});
+  }
+
   async fetchCreditTotals(overrides?: DateParams) {
     const params = {
       year: overrides?.year,

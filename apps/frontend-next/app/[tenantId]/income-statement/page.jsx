@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { resolveTenant } from "../../../lib/platform/tenant/resolve-tenant";
@@ -47,6 +48,7 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
   const isAgroLike = isAgro || isYupluk;
   const isGurlusyk = tenantId === "gurlusyk";
   const isMaksatDeri = tenantId === "maksat-deri";
+  const isAlgyBergi = tenantId === "algy-bergi";
   const usesClientCode = isGurlusyk;
   const defaultClientCode = "120.05.001";
   const year = rawQuery.year ? String(rawQuery.year) : "";
@@ -54,6 +56,8 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
   const startDate = rawQuery.startDate ? String(rawQuery.startDate) : "";
   const endDate = rawQuery.endDate ? String(rawQuery.endDate) : "";
   const code = usesClientCode ? (rawQuery.code ? String(rawQuery.code) : defaultClientCode) : "";
+  const expandedRevenue = rawQuery.revenue ? String(rawQuery.revenue) : "";
+  const expandedExpense = rawQuery.expense ? String(rawQuery.expense) : "";
 
   const [dateFilterData, clientsData, revenueData, expenseData, balanceData] = await Promise.all([
     fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
@@ -146,8 +150,188 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
   const clients = Array.isArray(clientsData) ? clientsData : [];
   const selectedClient = clients.find((client) => String(client.code ?? "").trim() === code) ?? null;
   const selectedClientName = String(
-    selectedClient?.name ?? selectedClient?.code ?? (isAgroLike ? tenant.name : code)
+    selectedClient?.name ?? selectedClient?.code ?? (isAgroLike || isAlgyBergi ? tenant.name : code)
   ).trim();
+
+  if (isAlgyBergi) {
+    return (
+      <div className="layout-grid income-layout-grid income-totals-layout">
+        <div>
+          <div className="panel income-panel">
+            <div className="panel-title income-panel-title">
+              <div className="income-title-client">{tenant.name.toUpperCase()}</div>
+            </div>
+            <table className="income-table">
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left" }}></th>
+                  <th>TMT</th>
+                  <th>USD</th>
+                </tr>
+              </thead>
+              <tbody>
+                {revenueCategories.length === 0 && expenseCategories.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} style={{ textAlign: "center", color: "#64748b" }}>
+                      No data
+                    </td>
+                  </tr>
+                ) : (
+                  <>
+                    <tr className="income-main-total-row">
+                      <td style={{ textAlign: "left" }}>Girdeji</td>
+                      <td>{money(revenueTotalTmt)}</td>
+                      <td>{money(revenueTotalUsd)}</td>
+                    </tr>
+                    {revenueCategories.map((row, idx) => {
+                      const categoryCode = String(row.id ?? row.name ?? idx + 1);
+                      const clients = Array.isArray(row.clients) ? row.clients : [];
+                      const isOpen = expandedRevenue === categoryCode;
+                      return (
+                        <Fragment key={`rev-${categoryCode}`}>
+                          <tr className="income-category-row">
+                            <td style={{ textAlign: "left" }}>
+                              <Link
+                                href={`/${tenantId}/income-statement?${buildQuery({
+                                  revenue: isOpen ? "" : categoryCode,
+                                  expense: expandedExpense,
+                                  year,
+                                  month,
+                                  startDate,
+                                  endDate
+                                })}`}
+                                className="income-category-link balance-level-link balance-level-group"
+                                style={{ paddingLeft: 0 }}
+                              >
+                                <span className="balance-level-indicator">{isOpen ? "▾" : "▸"}</span>
+                                {row.name || "-"}
+                              </Link>
+                            </td>
+                            <td>{money(row.lineNet)}</td>
+                            <td>{money(row.reportNet)}</td>
+                          </tr>
+                          {isOpen
+                            ? clients.map((client, clientIdx) => (
+                                <tr key={`rev-client-${categoryCode}-${client.clcode || clientIdx}`} className="income-category-row balance-name-row">
+                                  <td style={{ textAlign: "left", fontWeight: 500, color: "#526071" }}>
+                                    <Link
+                                      href={`/${tenantId}/income-statement/details?${buildQuery({
+                                        kind: "revenue",
+                                        category: categoryCode,
+                                        clcode: client.clcode,
+                                        year,
+                                        month,
+                                        startDate,
+                                        endDate
+                                      })}`}
+                                      className="income-category-link"
+                                      style={{ fontWeight: 500, color: "#526071" }}
+                                    >
+                                      <span style={{ display: "inline-flex", alignItems: "center", paddingLeft: 28 }}>
+                                        <span style={{ width: 14, display: "inline-block" }}></span>
+                                        <span>{client.client || client.clcode || "-"}</span>
+                                      </span>
+                                    </Link>
+                                  </td>
+                                  <td>{money(client.lineNet)}</td>
+                                  <td>{money(client.reportNet)}</td>
+                                </tr>
+                              ))
+                            : null}
+                        </Fragment>
+                      );
+                    })}
+                    <tr className="row-expense">
+                      <td style={{ textAlign: "left" }}>Cykdajy</td>
+                      <td>{money(expenseTotalTmt)}</td>
+                      <td>{money(expenseTotalUsd)}</td>
+                    </tr>
+                    {expenseCategories.map((row, idx) => {
+                      const categoryCode = String(row.id ?? row.name ?? idx + 1);
+                      const clients = Array.isArray(row.clients) ? row.clients : [];
+                      const isOpen = expandedExpense === categoryCode;
+                      return (
+                        <Fragment key={`exp-${categoryCode}`}>
+                          <tr className="income-category-row">
+                            <td style={{ textAlign: "left" }}>
+                              <Link
+                                href={`/${tenantId}/income-statement?${buildQuery({
+                                  revenue: expandedRevenue,
+                                  expense: isOpen ? "" : categoryCode,
+                                  year,
+                                  month,
+                                  startDate,
+                                  endDate
+                                })}`}
+                                className="income-category-link balance-level-link balance-level-group"
+                                style={{ paddingLeft: 0 }}
+                              >
+                                <span className="balance-level-indicator">{isOpen ? "▾" : "▸"}</span>
+                                {row.name || "-"}
+                              </Link>
+                            </td>
+                            <td>{money(row.lineNet)}</td>
+                            <td>{money(row.reportNet)}</td>
+                          </tr>
+                          {isOpen
+                            ? clients.map((client, clientIdx) => (
+                                <tr key={`exp-client-${categoryCode}-${client.clcode || clientIdx}`} className="income-category-row balance-name-row">
+                                  <td style={{ textAlign: "left", fontWeight: 500, color: "#526071" }}>
+                                    <Link
+                                      href={`/${tenantId}/income-statement/details?${buildQuery({
+                                        kind: "expense",
+                                        category: categoryCode,
+                                        clcode: client.clcode,
+                                        year,
+                                        month,
+                                        startDate,
+                                        endDate
+                                      })}`}
+                                      className="income-category-link"
+                                      style={{ fontWeight: 500, color: "#526071" }}
+                                    >
+                                      <span style={{ display: "inline-flex", alignItems: "center", paddingLeft: 28 }}>
+                                        <span style={{ width: 14, display: "inline-block" }}></span>
+                                        <span>{client.client || client.clcode || "-"}</span>
+                                      </span>
+                                    </Link>
+                                  </td>
+                                  <td>{money(client.lineNet)}</td>
+                                  <td>{money(client.reportNet)}</td>
+                                </tr>
+                              ))
+                            : null}
+                        </Fragment>
+                      );
+                    })}
+                    <tr className="row-profit">
+                      <td style={{ textAlign: "left" }}>Peyda</td>
+                      <td>{money(profitTotalTmt)}</td>
+                      <td>{money(profitTotalUsd)}</td>
+                    </tr>
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <IncomeFiltersCard
+          title="Filters"
+          compact
+          showClient={false}
+          month={month}
+          year={year}
+          startDate={startDate}
+          endDate={endDate}
+          clients={[]}
+          months={months}
+          years={years}
+          extraParams={{ revenue: expandedRevenue, expense: expandedExpense }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="layout-grid income-layout-grid income-totals-layout">
@@ -179,7 +363,7 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
                     <td>{money(revenueTotalUsd)}</td>
                   </tr>
                   {revenueCategories.map((row, idx) => {
-                    const id = isAgroLike ? toCategoryId(row.id ?? row.name, idx + 1) : toNumber(row.id, idx + 1);
+                    const id = isAgroLike || isAlgyBergi ? toCategoryId(row.id ?? row.name, idx + 1) : toNumber(row.id, idx + 1);
                     const isGymmatyRow = isAgroLike && String(row.id ?? "").toUpperCase() === "GYMMATY";
                     const detailsQuery = buildQuery({
                       kind: "revenue",
@@ -210,8 +394,8 @@ export default async function IncomeStatementTotalsPage({ params, searchParams }
                     <td>{money(expenseTotalUsd)}</td>
                   </tr>
                   {expenseCategories.map((row, idx) => {
-                    const id = toNumber(row.id, idx + 1);
-                    const expenseCategory = isAgroLike ? String(row.name ?? id) : id;
+                    const id = isAgroLike || isAlgyBergi ? toCategoryId(row.id ?? row.name, idx + 1) : toNumber(row.id, idx + 1);
+                    const expenseCategory = isAgroLike || isAlgyBergi ? String(row.id ?? row.name ?? id) : id;
                     const detailsQuery = buildQuery({
                       kind: "expense",
                       category: expenseCategory,

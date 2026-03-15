@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { resolveTenant } from "../../../lib/platform/tenant/resolve-tenant";
 import {
   fetchBalanceAdvanceTotals,
+  fetchBalanceDateFilters,
   fetchBalanceBioTotals,
   fetchBalanceCreditTotals,
   fetchBalanceDebitTotals,
@@ -62,7 +63,10 @@ export default async function BalanceSheetTotalsPage({ params, searchParams }) {
   const selectedShareGroup = rawQuery.shareGroup ? String(rawQuery.shareGroup) : "";
 
   const [dateFilterData, totalsData, materialTotalsData, creditTotalsData, debitTotalsData, bioTotalsData, loanTotalsData, advanceTotalsData, intangibleTotalsData, shareTotalsData] = await Promise.all([
-    fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
+    (tenant.id === "algy-bergi" ? fetchBalanceDateFilters(tenantId) : fetchIncomeDateFilters(tenantId)).catch(() => ({
+      years: [],
+      months: []
+    })),
     fetchBalanceTotals(tenantId, {
       year: year || undefined,
       month: month || undefined,

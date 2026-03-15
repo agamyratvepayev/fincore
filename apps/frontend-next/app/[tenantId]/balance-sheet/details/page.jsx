@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { resolveTenant } from "../../../../lib/platform/tenant/resolve-tenant";
 import {
   fetchBalanceAdvanceTotals,
+  fetchBalanceDateFilters,
   fetchBalanceBioTotals,
   fetchBalanceCreditTotals,
   fetchBalanceDebitTotals,
@@ -104,7 +105,7 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
 
   if (isAlgyBergi) {
     const [dateFilterData, detailsData, totalsData] = await Promise.all([
-      fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
+      fetchBalanceDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
       fetchBalanceDetails(tenantId, {
         code: detailCode,
         offset: 0,
@@ -315,7 +316,10 @@ export default async function BalanceSheetDetailsPage({ params, searchParams }) 
   }
 
   const [dateFilterData, detailsData, totalsData, materialTotalsData, creditTotalsData, debitTotalsData, bioTotalsData, loanTotalsData, advanceTotalsData, intangibleTotalsData, shareTotalsData] = await Promise.all([
-    fetchIncomeDateFilters(tenantId).catch(() => ({ years: [], months: [] })),
+    (isAlgyBergi ? fetchBalanceDateFilters(tenantId) : fetchIncomeDateFilters(tenantId)).catch(() => ({
+      years: [],
+      months: []
+    })),
     fetchBalanceDetails(tenantId, {
       kind,
       category: detailCategory,

@@ -17,3 +17,7 @@ export function queryCreditDetails(params: DateParams = {}) {
   void params;
   return "EXEC ALBBALCREDET @CODE = :code, @OFFSET = :offset, @LIMIT = :limit, @YEAR = :year, @MONTH = :month, @STARTDATE = :startDate, @ENDDATE = :endDate";
 }
+
+export function queryDateFilters() {
+  return "EXEC ALBBALFILDAT";
+}

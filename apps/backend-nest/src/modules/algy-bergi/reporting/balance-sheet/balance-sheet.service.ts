@@ -5,6 +5,30 @@ import { BalanceSheetRepository } from "./balance-sheet.repository.js";
 export class BalanceSheetService {
   constructor(private readonly repository = new BalanceSheetRepository()) {}
 
+  async dateFilters(tenantId: string) {
+    await ensureReportingTenantReady(tenantId);
+    const rows = await this.repository.fetchDateFilters();
+    const dates = rows
+      .map((row) => {
+        const value = row.DATE_ ?? row.date_ ?? row.date ?? Object.values(row)[0];
+        if (!value) return null;
+        const parsed = new Date(String(value));
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+      })
+      .filter((item): item is Date => item !== null)
+      .sort((a, b) => a.getTime() - b.getTime());
+    const years = Array.from(new Set(dates.map((d) => d.getUTCFullYear()))).sort((a, b) => b - a);
+    const months = Array.from(new Set(dates.map((d) => d.getUTCMonth() + 1))).sort((a, b) => a - b);
+    const toIsoDate = (date: Date) => date.toISOString().slice(0, 10);
+
+    return {
+      years,
+      months,
+      minStartDate: dates.length ? toIsoDate(dates[0]) : null,
+      maxEndDate: dates.length ? toIsoDate(dates[dates.length - 1]) : null
+    };
+  }
+
   async execute(
     tenantId: string,
     filters?: {

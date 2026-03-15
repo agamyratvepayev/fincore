@@ -62,6 +62,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
   const isAgroLike = isAgro || isYupluk;
   const isGurlusyk = tenantId === "gurlusyk";
   const isMaksatDeri = tenantId === "maksat-deri";
+  const isAlgyBergi = tenantId === "algy-bergi";
   const usesClientCode = isGurlusyk;
   const defaultClientCode = "120.05.001";
   const kind = rawQuery.kind === "expense" ? "expense" : rawQuery.kind === "balance" ? "balance" : "revenue";
@@ -78,6 +79,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
       : rawCategory
     : rawCategory;
   const code = usesClientCode ? (rawQuery.code ? String(rawQuery.code) : defaultClientCode) : "";
+  const clcode = rawQuery.clcode ? String(rawQuery.clcode) : "";
   const year = rawQuery.year ? String(rawQuery.year) : "";
   const month = rawQuery.month ? String(rawQuery.month) : "";
   const startDate = rawQuery.startDate ? String(rawQuery.startDate) : "";
@@ -89,7 +91,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
     : kind === "expense" || kind === "balance"
       ? "type"
       : "specode";
-  const hideTypeSummary = isMaksatDeri && kind === "expense";
+  const hideTypeSummary = (isMaksatDeri && kind === "expense") || isAlgyBergi;
   const isMaksatExpenseView = isMaksatDeri && kind === "expense";
   const showGroupColumn = !hideTypeSummary;
   const selectedGroup =
@@ -123,6 +125,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
     usesClientCode ? fetchIncomeClients(tenantId).catch(() => []) : Promise.resolve([]),
     fetchIncomeDetails(tenantId, kind, {
       category,
+      clcode: isAlgyBergi ? clcode || undefined : undefined,
       offset: 0,
       limit: detailsFetchLimit,
       code: usesClientCode ? code || undefined : undefined,
@@ -158,10 +161,11 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
           ? "Beylekiler"
           : `Category ${category}`;
   const categoryName = String(
+      (isAlgyBergi ? allRows[0]?.CLIENT ?? allRows[0]?.client : undefined) ??
       allRows[0]?.CATEGORY ??
+      allRows[0]?.DEFINITION_ ??
       allRows[0]?.NAME ??
       allRows[0]?.ADDR1 ??
-      allRows[0]?.DEFINITION_ ??
       allRows[0]?.name ??
       defaultCategoryName
   ).trim();
@@ -188,6 +192,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
   const prevQuery = buildQuery({
     kind,
     category,
+    clcode: isAlgyBergi ? clcode : "",
     gymmaty: isGymmatyView ? "1" : "",
     code: usesClientCode ? code : "",
     year,
@@ -201,6 +206,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
   const nextQuery = buildQuery({
     kind,
     category,
+    clcode: isAlgyBergi ? clcode : "",
     gymmaty: isGymmatyView ? "1" : "",
     code: usesClientCode ? code : "",
     year,
@@ -224,7 +230,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
   const groupSummary = Array.from(groupSummaryMap.entries())
     .map(([name, value]) => ({ name, tmt: value.tmt, usd: value.usd, count: value.count }))
     .sort((a, b) => b.tmt - a.tmt);
-  const showNameAmountColumns = allRows.some((row) =>
+  const showNameAmountColumns = !isAlgyBergi && allRows.some((row) =>
     isAgroLike
       ? text(row.DEFINITION_ ?? row.definition_) && text(row.AMOUNT ?? row.amount)
       : text(row.ADDR1 ?? row.addr1) && text(row.AMOUNT ?? row.amount)
@@ -318,6 +324,14 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
                     <th className="income-details-money-col">LINENET</th>
                     <th className="income-details-money-col">REPORTNET</th>
                   </>
+                ) : isAlgyBergi ? (
+                  <>
+                    <th className="income-details-date-col" style={{ textAlign: "center" }}>Date</th>
+                    <th style={{ textAlign: "center" }}>Client</th>
+                    <th style={{ textAlign: "center" }}>Explanation</th>
+                    <th className="income-details-money-col">TMT</th>
+                    <th className="income-details-money-col">USD</th>
+                  </>
                 ) : (
                   <>
                     <th className="income-details-date-col" style={{ textAlign: "center" }}>Date</th>
@@ -334,7 +348,7 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={isMaksatExpenseView ? 6 : showNameAmountColumns ? (showGroupColumn ? 7 : 6) : showGroupColumn ? 5 : 4} style={{ textAlign: "center", color: "#64748b" }}>
+                  <td colSpan={isMaksatExpenseView ? 6 : isAlgyBergi ? 5 : showNameAmountColumns ? (showGroupColumn ? 7 : 6) : showGroupColumn ? 5 : 4} style={{ textAlign: "center", color: "#64748b" }}>
                     No details
                   </td>
                 </tr>
@@ -349,6 +363,19 @@ export default async function IncomeStatementDetailsPage({ params, searchParams 
                         <td style={{ textAlign: "center" }}>{String(row.DEFINITION_ ?? row.definition_ ?? "-")}</td>
                         <td style={{ textAlign: "center" }}>{String(row.LINEEXP ?? row.lineexp ?? "-")}</td>
                         <td style={{ textAlign: "center" }}>{String(row.AMOUNT ?? row.amount ?? "-")}</td>
+                        <td className="income-details-money-col">{money(row.LINENET ?? row.linenet)}</td>
+                        <td className="income-details-money-col">{money(row.REPORTNET ?? row.reportnet)}</td>
+                      </tr>
+                    );
+                  }
+                  if (isAlgyBergi) {
+                    return (
+                      <tr key={`row-${idx}`}>
+                        <td className="income-details-date-col" style={{ textAlign: "center" }}>
+                          {isoDate(row.DATE_ ?? row.date_ ?? row.date)}
+                        </td>
+                        <td style={{ textAlign: "center" }}>{String(row.CLIENT ?? row.client ?? "-")}</td>
+                        <td style={{ textAlign: "center" }}>{String(row.EXPLANATION ?? row.explanation ?? "-")}</td>
                         <td className="income-details-money-col">{money(row.LINENET ?? row.linenet)}</td>
                         <td className="income-details-money-col">{money(row.REPORTNET ?? row.reportnet)}</td>
                       </tr>
